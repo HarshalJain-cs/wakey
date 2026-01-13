@@ -8,7 +8,9 @@ import {
     BarChart3,
     Settings,
     Play,
-    Pause
+    Pause,
+    TrendingUp,
+    Code
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -22,6 +24,8 @@ const navItems = [
     { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
     { path: '/projects', icon: FolderKanban, label: 'Projects' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/trader', icon: TrendingUp, label: 'Trader' },
+    { path: '/developer', icon: Code, label: 'Developer' },
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 

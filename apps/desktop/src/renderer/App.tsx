@@ -8,6 +8,8 @@ import FocusPage from './pages/FocusPage';
 import TasksPage from './pages/TasksPage';
 import ProjectsPage from './pages/ProjectsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import TraderDashboard from './pages/TraderDashboard';
+import DeveloperDashboard from './pages/DeveloperDashboard';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
@@ -74,6 +76,8 @@ export default function App() {
                         <Route path="/tasks" element={<TasksPage />} />
                         <Route path="/projects" element={<ProjectsPage />} />
                         <Route path="/analytics" element={<AnalyticsPage />} />
+                        <Route path="/trader" element={<TraderDashboard />} />
+                        <Route path="/developer" element={<DeveloperDashboard />} />
                         <Route path="/settings" element={
                             <SettingsPage
                                 darkMode={darkMode}
