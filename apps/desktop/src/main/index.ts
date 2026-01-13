@@ -33,6 +33,48 @@ interface Task {
     completed_at?: string;
 }
 
+interface Note {
+    id: number;
+    title: string;
+    content: string;
+    tags: string[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface KnowledgeNode {
+    id: string;
+    type: 'note' | 'concept' | 'entity' | 'task';
+    title: string;
+    content: string;
+    metadata?: any;
+}
+
+interface KnowledgeEdge {
+    source: string;
+    target: string;
+    type: string;
+}
+
+interface Flashcard {
+    id: number;
+    front: string;
+    back: string;
+    intervalDays: number;
+    easeFactor: number;
+    nextReview: string;
+    createdAt: string;
+}
+
+interface AgentTask {
+    id: string;
+    agentType: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    result?: any;
+    error?: string;
+    createdAt: string;
+}
+
 interface StoreSchema {
     settings: {
         autoStartTracking: boolean;
@@ -41,11 +83,23 @@ interface StoreSchema {
         syncInterval: number;
         trackUrls: boolean;
         idleThreshold: number;
+        customDistractions: string[];
     };
     activities: Activity[];
     focusSessions: FocusSession[];
     tasks: Task[];
-    nextIds: { activity: number; session: number; task: number };
+    notes: Note[];
+    knowledgeNodes: KnowledgeNode[];
+    knowledgeEdges: KnowledgeEdge[];
+    flashcards: Flashcard[];
+    agentTasks: AgentTask[];
+    nextIds: {
+        activity: number;
+        session: number;
+        task: number;
+        note: number;
+        flashcard: number;
+    };
 }
 
 const store = new Store<StoreSchema>({
@@ -57,11 +111,23 @@ const store = new Store<StoreSchema>({
             syncInterval: 60,
             trackUrls: true,
             idleThreshold: 5,
+            customDistractions: [],
         },
         activities: [],
         focusSessions: [],
         tasks: [],
-        nextIds: { activity: 1, session: 1, task: 1 },
+        notes: [],
+        knowledgeNodes: [],
+        knowledgeEdges: [],
+        flashcards: [],
+        agentTasks: [],
+        nextIds: {
+            activity: 1,
+            session: 1,
+            task: 1,
+            note: 1,
+            flashcard: 1
+        },
     },
 });
 
@@ -96,9 +162,11 @@ function categorizeApp(appName: string): string {
 }
 
 function isDistraction(appName: string): boolean {
-    const distractions = ['youtube', 'netflix', 'tiktok', 'instagram', 'twitter', 'reddit', 'facebook', 'steam', 'twitch'];
+    const defaultDistractions = ['youtube', 'netflix', 'tiktok', 'instagram', 'twitter', 'reddit', 'facebook', 'steam', 'twitch', 'discord', 'telegram', 'whatsapp'];
+    const customDistractions = store.get('settings.customDistractions', []) as string[];
+    const allDistractions = [...defaultDistractions, ...customDistractions];
     const lower = appName.toLowerCase();
-    return distractions.some(d => lower.includes(d));
+    return allDistractions.some(d => lower.includes(d));
 }
 
 function getToday(): string {
@@ -373,6 +441,25 @@ function setupIpcHandlers(): void {
     ipcMain.handle('create-task', (_e, title: string, priority: string) => createTask(title, priority));
     ipcMain.handle('update-task-status', (_e, id: number, status: string) => updateTaskStatus(id, status));
     ipcMain.handle('delete-task', (_e, id: number) => deleteTask(id));
+
+    // Phase 5: Knowledge Management handlers
+    ipcMain.handle('get-notes', () => store.get('notes', []));
+    ipcMain.handle('save-notes', (_e, notes: Note[]) => { store.set('notes', notes); return true; });
+    ipcMain.handle('get-knowledge-graph', () => ({
+        nodes: store.get('knowledgeNodes', []),
+        edges: store.get('knowledgeEdges', []),
+    }));
+    ipcMain.handle('save-knowledge-graph', (_e, { nodes, edges }) => {
+        store.set('knowledgeNodes', nodes);
+        store.set('knowledgeEdges', edges);
+        return true;
+    });
+    ipcMain.handle('get-flashcards', () => store.get('flashcards', []));
+    ipcMain.handle('save-flashcards', (_e, cards: Flashcard[]) => { store.set('flashcards', cards); return true; });
+
+    // Phase 5: Agent handlers
+    ipcMain.handle('get-agent-tasks', () => store.get('agentTasks', []));
+    ipcMain.handle('save-agent-tasks', (_e, tasks: AgentTask[]) => { store.set('agentTasks', tasks); return true; });
 }
 
 app.whenReady().then(() => {
@@ -389,7 +476,16 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { });
-app.on('before-quit', () => { globalShortcut.unregisterAll(); stopTracking(); });
+app.on('before-quit', () => {
+    if (app.isReady()) {
+        try {
+            globalShortcut.unregisterAll();
+        } catch (e) {
+            console.error('Failed to unregister shortcuts:', e);
+        }
+    }
+    stopTracking();
+});
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) app.quit();

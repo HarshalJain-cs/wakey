@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
     BarChart3, Clock, Target, TrendingUp,
-    Download
+    Download, FileJson, FileText, Printer
 } from 'lucide-react';
+import { exportToCSV, exportToJSON, exportToPDF } from '../services/export-service';
 
 interface DayStats {
+    [key: string]: string | number;
     date: string;
     focusMinutes: number;
     distractions: number;
@@ -13,6 +15,7 @@ interface DayStats {
 
 export default function AnalyticsPage() {
     const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+    const [showExportMenu, setShowExportMenu] = useState(false);
     const [stats, setStats] = useState({
         focusTime: 0,
         sessions: 0,
@@ -61,6 +64,35 @@ export default function AnalyticsPage() {
         setWeekData(days);
     };
 
+    const handleExportCSV = () => {
+        exportToCSV(weekData, 'wakey-analytics', [
+            { key: 'date', header: 'Date' },
+            { key: 'focusMinutes', header: 'Focus (min)' },
+            { key: 'sessions', header: 'Sessions' },
+            { key: 'distractions', header: 'Distractions' },
+        ]);
+        setShowExportMenu(false);
+    };
+
+    const handleExportJSON = () => {
+        exportToJSON({
+            exportedAt: new Date().toISOString(),
+            period,
+            summary: {
+                totalFocusMinutes: weekData.reduce((sum, d) => sum + d.focusMinutes, 0),
+                totalSessions: weekData.reduce((sum, d) => sum + d.sessions, 0),
+                totalDistractions: weekData.reduce((sum, d) => sum + d.distractions, 0),
+            },
+            dailyData: weekData,
+        }, 'wakey-analytics');
+        setShowExportMenu(false);
+    };
+
+    const handleExportPDF = () => {
+        exportToPDF('analytics-content', 'wakey-analytics', 'Wakey Analytics Report');
+        setShowExportMenu(false);
+    };
+
     const maxFocus = Math.max(...weekData.map(d => d.focusMinutes), 1);
     const totalWeekFocus = weekData.reduce((sum, d) => sum + d.focusMinutes, 0);
     const avgDailyFocus = Math.round(totalWeekFocus / 7);
@@ -73,7 +105,7 @@ export default function AnalyticsPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" id="analytics-content">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -97,9 +129,42 @@ export default function AnalyticsPage() {
                         ))}
                     </div>
 
-                    <button className="p-2 bg-dark-800 rounded-lg text-dark-400 hover:text-white transition-colors">
-                        <Download className="w-5 h-5" />
-                    </button>
+                    {/* Export Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            className="p-2 bg-dark-800 rounded-lg text-dark-400 hover:text-white transition-colors flex items-center gap-2"
+                        >
+                            <Download className="w-5 h-5" />
+                            <span className="text-sm">Export</span>
+                        </button>
+
+                        {showExportMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-dark-800 border border-dark-700 rounded-lg shadow-lg z-50">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-dark-700 rounded-t-lg"
+                                >
+                                    <FileText className="w-4 h-4 text-green-400" />
+                                    Export as CSV
+                                </button>
+                                <button
+                                    onClick={handleExportJSON}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-dark-700"
+                                >
+                                    <FileJson className="w-4 h-4 text-blue-400" />
+                                    Export as JSON
+                                </button>
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-300 hover:bg-dark-700 rounded-b-lg"
+                                >
+                                    <Printer className="w-4 h-4 text-purple-400" />
+                                    Print / PDF
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

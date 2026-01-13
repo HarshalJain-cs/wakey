@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Moon, Sun, Bell, BellOff, Eye, EyeOff,
     Key, Save, Trash2, FolderOpen, Database,
-    Keyboard, Info, Shield, Zap
+    Keyboard, Info, Shield, Zap, AlertTriangle, Plus, X
 } from 'lucide-react';
 
 interface SettingsPageProps {
@@ -20,6 +20,7 @@ interface Settings {
     notificationsEnabled: boolean;
     soundEnabled: boolean;
     dailyFocusGoal: number;
+    customDistractions?: string[];
 }
 
 export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPageProps) {
@@ -32,10 +33,12 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
         notificationsEnabled: true,
         soundEnabled: true,
         dailyFocusGoal: 240,
+        customDistractions: [],
     });
     const [apiKey, setApiKey] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [newDistraction, setNewDistraction] = useState('');
 
     useEffect(() => {
         loadSettings();
@@ -44,9 +47,10 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
     const loadSettings = async () => {
         try {
             const data = await window.wakey.getSettings();
-            setSettings(data as Settings);
-            if ((data as Settings).groqApiKey) {
-                setApiKey((data as Settings).groqApiKey || '');
+            const loadedSettings = data as unknown as Settings;
+            setSettings(prev => ({ ...prev, ...loadedSettings }));
+            if (loadedSettings.groqApiKey) {
+                setApiKey(loadedSettings.groqApiKey || '');
             }
         } catch (error) {
             console.error('Failed to load settings:', error);
@@ -70,6 +74,18 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
     const showSavedIndicator = () => {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
+    };
+
+    const addDistraction = async () => {
+        if (!newDistraction.trim()) return;
+        const updated = [...(settings.customDistractions || []), newDistraction.trim().toLowerCase()];
+        await updateSetting('customDistractions', updated);
+        setNewDistraction('');
+    };
+
+    const removeDistraction = async (app: string) => {
+        const updated = (settings.customDistractions || []).filter(d => d !== app);
+        await updateSetting('customDistractions', updated);
     };
 
     const SettingToggle = ({
@@ -184,6 +200,68 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                         <span className="text-white font-medium w-20 text-right">
                             {Math.floor(settings.dailyFocusGoal / 60)}h {settings.dailyFocusGoal % 60}m
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Distraction Management */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                    Distraction Apps
+                </h2>
+
+                <div className="bg-dark-800 rounded-xl border border-dark-700 p-4">
+                    <p className="text-dark-400 text-sm mb-4">
+                        Add apps that you consider distracting. You'll be alerted when using these during focus time.
+                    </p>
+
+                    {/* Add new distraction */}
+                    <div className="flex gap-2 mb-4">
+                        <input
+                            type="text"
+                            value={newDistraction}
+                            onChange={(e) => setNewDistraction(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addDistraction()}
+                            placeholder="Enter app name (e.g., youtube, twitter)"
+                            className="flex-1 px-4 py-2 bg-dark-700 border border-dark-600 rounded-lg text-white placeholder-dark-500 focus:outline-none focus:border-primary-500"
+                        />
+                        <button
+                            onClick={addDistraction}
+                            disabled={!newDistraction.trim()}
+                            className="px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add
+                        </button>
+                    </div>
+
+                    {/* Distraction list */}
+                    <div className="space-y-2">
+                        {(settings.customDistractions || []).length === 0 ? (
+                            <p className="text-dark-500 text-sm text-center py-4">
+                                No custom distraction apps added yet
+                            </p>
+                        ) : (
+                            (settings.customDistractions || []).map((app) => (
+                                <div key={app} className="flex items-center justify-between p-3 bg-dark-700 rounded-lg">
+                                    <span className="text-white">{app}</span>
+                                    <button
+                                        onClick={() => removeDistraction(app)}
+                                        className="p-1 text-dark-400 hover:text-red-400 transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Default distractions info */}
+                    <div className="mt-4 pt-4 border-t border-dark-700">
+                        <p className="text-xs text-dark-500">
+                            <strong>Default distractions:</strong> YouTube, Netflix, TikTok, Twitter, Facebook, Instagram, Reddit, Discord, Telegram, WhatsApp
+                        </p>
                     </div>
                 </div>
             </div>

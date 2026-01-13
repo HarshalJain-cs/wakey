@@ -1,0 +1,326 @@
+// Export Service
+// Export analytics and data to various formats (CSV, JSON, PDF)
+
+// ==========================================
+// Types
+// ==========================================
+
+export interface ExportOptions {
+    filename: string;
+    format: 'csv' | 'json' | 'pdf';
+    dateRange?: {
+        start: Date;
+        end: Date;
+    };
+}
+
+// ==========================================
+// CSV Export
+// ==========================================
+
+/**
+ * Export data to CSV format
+ */
+export function exportToCSV<T extends Record<string, unknown>>(
+    data: T[],
+    filename: string,
+    columns?: { key: keyof T; header: string }[]
+): void {
+    if (data.length === 0) {
+        console.warn('No data to export');
+        return;
+    }
+
+    // Determine columns
+    const headers = columns
+        ? columns.map(c => c.header)
+        : Object.keys(data[0]);
+
+    const keys = columns
+        ? columns.map(c => c.key)
+        : Object.keys(data[0]) as (keyof T)[];
+
+    // Build CSV content
+    const rows: string[] = [headers.join(',')];
+
+    for (const item of data) {
+        const values = keys.map(key => {
+            const value = item[key];
+            if (value === null || value === undefined) return '';
+            if (typeof value === 'string') {
+                // Escape quotes and wrap in quotes if contains comma
+                const escaped = value.replace(/"/g, '""');
+                return escaped.includes(',') || escaped.includes('\n')
+                    ? `"${escaped}"`
+                    : escaped;
+            }
+            return String(value);
+        });
+        rows.push(values.join(','));
+    }
+
+    const csvContent = rows.join('\n');
+    downloadFile(csvContent, `${filename}.csv`, 'text/csv');
+}
+
+// ==========================================
+// JSON Export
+// ==========================================
+
+/**
+ * Export data to JSON format
+ */
+export function exportToJSON<T>(
+    data: T,
+    filename: string,
+    pretty: boolean = true
+): void {
+    const jsonContent = pretty
+        ? JSON.stringify(data, null, 2)
+        : JSON.stringify(data);
+
+    downloadFile(jsonContent, `${filename}.json`, 'application/json');
+}
+
+// ==========================================
+// PDF Export
+// ==========================================
+
+/**
+ * Export HTML element to PDF
+ * Uses html2canvas approach (simplified version)
+ */
+export async function exportToPDF(
+    elementId: string,
+    filename: string,
+    title?: string
+): Promise<void> {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.error(`Element with id "${elementId}" not found`);
+        return;
+    }
+
+    // Create a printable version
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        console.error('Could not open print window');
+        return;
+    }
+
+    // Build HTML content for PDF
+    const styles = `
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                padding: 40px;
+                color: #333;
+                background: white;
+            }
+            h1 { color: #14b8a6; margin-bottom: 20px; }
+            h2 { color: #0f766e; margin-top: 30px; }
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin: 20px 0;
+            }
+            th, td { 
+                border: 1px solid #ddd; 
+                padding: 12px; 
+                text-align: left; 
+            }
+            th { background: #f8f9fa; font-weight: 600; }
+            tr:nth-child(even) { background: #f9fafb; }
+            .stat-card {
+                display: inline-block;
+                padding: 20px;
+                margin: 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                min-width: 150px;
+            }
+            .stat-value { font-size: 24px; font-weight: bold; color: #14b8a6; }
+            .stat-label { color: #6b7280; font-size: 14px; }
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 1px solid #e5e7eb;
+                color: #9ca3af;
+                font-size: 12px;
+            }
+            @media print {
+                body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            }
+        </style>
+    `;
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${title || filename}</title>
+            ${styles}
+        </head>
+        <body>
+            <h1>${title || 'Wakey Report'}</h1>
+            <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            ${element.innerHTML}
+            <div class="footer">
+                Generated by Wakey - AI-Powered Productivity Platform
+            </div>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+
+    // Wait for content to load then print
+    printWindow.onload = () => {
+        printWindow.print();
+    };
+}
+
+// ==========================================
+// Activity Export
+// ==========================================
+
+export interface ActivityExportData {
+    [key: string]: string | number | boolean;
+    app_name: string;
+    window_title: string;
+    category: string;
+    duration_minutes: number;
+    is_distraction: boolean;
+    date: string;
+}
+
+/**
+ * Export activities with formatting
+ */
+export function exportActivities(
+    activities: ActivityExportData[],
+    format: 'csv' | 'json',
+    filename: string = 'wakey-activities'
+): void {
+    if (format === 'csv') {
+        exportToCSV(activities, filename, [
+            { key: 'date', header: 'Date' },
+            { key: 'app_name', header: 'Application' },
+            { key: 'category', header: 'Category' },
+            { key: 'duration_minutes', header: 'Duration (min)' },
+            { key: 'is_distraction', header: 'Distraction' },
+        ]);
+    } else {
+        exportToJSON({
+            exportedAt: new Date().toISOString(),
+            totalActivities: activities.length,
+            activities,
+        }, filename);
+    }
+}
+
+// ==========================================
+// Focus Sessions Export
+// ==========================================
+
+export interface FocusSessionExportData {
+    [key: string]: string | number;
+    type: string;
+    duration_minutes: number;
+    quality_score: number;
+    distractions_count: number;
+    started_at: string;
+    ended_at: string;
+}
+
+/**
+ * Export focus sessions with formatting
+ */
+export function exportFocusSessions(
+    sessions: FocusSessionExportData[],
+    format: 'csv' | 'json',
+    filename: string = 'wakey-focus-sessions'
+): void {
+    if (format === 'csv') {
+        exportToCSV(sessions, filename, [
+            { key: 'started_at', header: 'Started' },
+            { key: 'ended_at', header: 'Ended' },
+            { key: 'type', header: 'Type' },
+            { key: 'duration_minutes', header: 'Duration (min)' },
+            { key: 'quality_score', header: 'Quality Score' },
+            { key: 'distractions_count', header: 'Distractions' },
+        ]);
+    } else {
+        exportToJSON({
+            exportedAt: new Date().toISOString(),
+            totalSessions: sessions.length,
+            sessions,
+        }, filename);
+    }
+}
+
+// ==========================================
+// Full Backup Export
+// ==========================================
+
+export interface FullBackupData {
+    version: string;
+    exportedAt: string;
+    activities: unknown[];
+    focusSessions: unknown[];
+    tasks: unknown[];
+    notes: unknown[];
+    flashcards: unknown[];
+    settings: Record<string, unknown>;
+}
+
+/**
+ * Export full backup of all data
+ */
+export function exportFullBackup(data: FullBackupData): void {
+    const filename = `wakey-backup-${new Date().toISOString().split('T')[0]}`;
+    exportToJSON(data, filename);
+}
+
+// ==========================================
+// Helper Functions
+// ==========================================
+
+/**
+ * Trigger file download in browser
+ */
+function downloadFile(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Format date for filenames
+ */
+export function formatDateForFilename(date: Date = new Date()): string {
+    return date.toISOString().split('T')[0];
+}
+
+/**
+ * Generate report title with date range
+ */
+export function generateReportTitle(
+    reportType: string,
+    startDate?: Date,
+    endDate?: Date
+): string {
+    if (startDate && endDate) {
+        return `${reportType} (${formatDateForFilename(startDate)} to ${formatDateForFilename(endDate)})`;
+    }
+    return `${reportType} - ${formatDateForFilename()}`;
+}

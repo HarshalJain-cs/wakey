@@ -10,7 +10,14 @@ import {
     Play,
     Pause,
     TrendingUp,
-    Code
+    Code,
+    Plug,
+    Brain,
+    BookOpen,
+    Bot,
+    GraduationCap,
+    Globe,
+    Cloud
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,8 +31,15 @@ const navItems = [
     { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
     { path: '/projects', icon: FolderKanban, label: 'Projects' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/research', icon: Globe, label: 'Research' },
+    { path: '/integrations', icon: Plug, label: 'Integrations' },
     { path: '/trader', icon: TrendingUp, label: 'Trader' },
     { path: '/developer', icon: Code, label: 'Developer' },
+    { path: '/ai-consensus', icon: Brain, label: 'AI Consensus' },
+    { path: '/knowledge', icon: BookOpen, label: 'Knowledge' },
+    { path: '/agents', icon: Bot, label: 'Agents' },
+    { path: '/flashcards', icon: GraduationCap, label: 'Flashcards' },
+    { path: '/cloud-sync', icon: Cloud, label: 'Cloud Sync' },
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
