@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(pnpm install)",
+      "Bash(npx electron-builder --win --x64)",
+      "Bash(CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder:*)",
+      "Bash(ls:*)",
+      "Bash(npx electron-builder --win portable --x64)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}
