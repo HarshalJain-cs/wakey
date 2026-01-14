@@ -17,7 +17,8 @@ import {
     Bot,
     GraduationCap,
     Globe,
-    Cloud
+    Cloud,
+    Trophy
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ const navItems = [
     { path: '/knowledge', icon: BookOpen, label: 'Knowledge' },
     { path: '/agents', icon: Bot, label: 'Agents' },
     { path: '/flashcards', icon: GraduationCap, label: 'Flashcards' },
+    { path: '/achievements', icon: Trophy, label: 'Achievements' },
     { path: '/cloud-sync', icon: Cloud, label: 'Cloud Sync' },
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];

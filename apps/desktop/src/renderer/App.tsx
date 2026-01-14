@@ -20,6 +20,7 @@ import AgentsPage from './pages/AgentsPage';
 import FlashcardsPage from './pages/FlashcardsPage';
 import ResearchPage from './pages/ResearchPage';
 import CloudSyncPage from './pages/CloudSyncPage';
+import AchievementsPage from './pages/AchievementsPage';
 
 export default function App() {
     const [isTracking, setIsTracking] = useState(false);
@@ -108,6 +109,7 @@ export default function App() {
                         <Route path="/knowledge" element={<KnowledgePage />} />
                         <Route path="/agents" element={<AgentsPage />} />
                         <Route path="/flashcards" element={<FlashcardsPage />} />
+                        <Route path="/achievements" element={<AchievementsPage />} />
                         <Route path="/cloud-sync" element={<CloudSyncPage />} />
                         <Route path="/settings" element={
                             <SettingsPage
