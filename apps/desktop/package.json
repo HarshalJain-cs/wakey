@@ -2,6 +2,7 @@
     "name": "@wakey/desktop",
     "version": "0.1.0",
     "private": true,
+    "author": "Wakey Team <team@wakey.app>",
     "description": "Wakey Desktop - AI-powered productivity tracker",
     "main": "out/main/index.js",
     "scripts": {
