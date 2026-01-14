@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import {
     Moon, Sun, Bell, BellOff, Eye, EyeOff,
     Key, Save, Trash2, FolderOpen, Database,
-    Keyboard, Info, Shield, Zap, AlertTriangle, Plus, X
+    Keyboard, Info, Shield, Zap, AlertTriangle, Plus, X,
+    Cloud, LogOut, User, Check
 } from 'lucide-react';
+import * as supabaseAuth from '../services/supabase-auth';
 
 interface SettingsPageProps {
     darkMode: boolean;
@@ -39,9 +41,25 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
     const [showApiKey, setShowApiKey] = useState(false);
     const [saved, setSaved] = useState(false);
     const [newDistraction, setNewDistraction] = useState('');
+    const [supabaseUrl, setSupabaseUrl] = useState('');
+    const [supabaseKey, setSupabaseKey] = useState('');
+    const [showSupabaseKey, setShowSupabaseKey] = useState(false);
+    const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
+    const [requireAuth, setRequireAuth] = useState(true);
 
     useEffect(() => {
         loadSettings();
+
+        // Subscribe to auth state changes
+        const unsubscribe = supabaseAuth.subscribe((state) => {
+            if (state.user) {
+                setAuthUser({ email: state.user.email || '' });
+            } else {
+                setAuthUser(null);
+            }
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const loadSettings = async () => {
@@ -52,6 +70,10 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
             if (loadedSettings.groqApiKey) {
                 setApiKey(loadedSettings.groqApiKey || '');
             }
+            // Load Supabase config
+            setSupabaseUrl((data.supabaseUrl as string) || '');
+            setSupabaseKey((data.supabaseAnonKey as string) || '');
+            setRequireAuth(data.requireAuth !== false);
         } catch (error) {
             console.error('Failed to load settings:', error);
         }
@@ -69,6 +91,34 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
 
     const saveApiKey = async () => {
         await updateSetting('groqApiKey', apiKey);
+    };
+
+    const saveSupabaseConfig = async () => {
+        try {
+            await window.wakey.setSetting('supabaseUrl', supabaseUrl);
+            await window.wakey.setSetting('supabaseAnonKey', supabaseKey);
+            showSavedIndicator();
+            // Reinitialize Supabase with new credentials
+            if (supabaseUrl && supabaseKey) {
+                await supabaseAuth.initSupabase();
+            }
+        } catch (error) {
+            console.error('Failed to save Supabase config:', error);
+        }
+    };
+
+    const toggleRequireAuth = async () => {
+        const newValue = !requireAuth;
+        setRequireAuth(newValue);
+        await window.wakey.setSetting('requireAuth', newValue);
+        showSavedIndicator();
+    };
+
+    const handleSignOut = async () => {
+        const result = await supabaseAuth.signOut();
+        if (result.success) {
+            setAuthUser(null);
+        }
     };
 
     const showSavedIndicator = () => {
@@ -136,6 +186,120 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                         Settings saved
                     </div>
                 )}
+            </div>
+
+            {/* Account & Cloud */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Cloud className="w-5 h-5 text-primary-400" />
+                    Account & Cloud
+                </h2>
+
+                {/* User Profile */}
+                {authUser ? (
+                    <div className="p-4 bg-dark-800 rounded-xl border border-dark-700">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-primary-500/20 rounded-full flex items-center justify-center">
+                                    <User className="w-6 h-6 text-primary-400" />
+                                </div>
+                                <div>
+                                    <div className="font-medium text-white">{authUser.email}</div>
+                                    <div className="text-sm text-green-400 flex items-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        Signed in
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleSignOut}
+                                className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-dark-300 hover:text-white rounded-lg transition-colors flex items-center gap-2"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="p-4 bg-dark-800 rounded-xl border border-dark-700">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-dark-700 rounded-full flex items-center justify-center">
+                                <User className="w-6 h-6 text-dark-500" />
+                            </div>
+                            <div>
+                                <div className="font-medium text-dark-400">Not signed in</div>
+                                <div className="text-sm text-dark-500">Configure Supabase below to enable cloud sync</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Require Auth Toggle */}
+                <SettingToggle
+                    icon={Shield}
+                    label="Require Authentication"
+                    description="Require sign-in to use the app (disable for offline use)"
+                    value={requireAuth}
+                    onChange={toggleRequireAuth}
+                />
+
+                {/* Supabase Configuration */}
+                <div className="p-4 bg-dark-800 rounded-xl border border-dark-700 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Database className="w-5 h-5 text-primary-400" />
+                        <span className="font-medium text-white">Supabase Configuration</span>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">
+                            Project URL
+                        </label>
+                        <input
+                            type="text"
+                            value={supabaseUrl}
+                            onChange={(e) => setSupabaseUrl(e.target.value)}
+                            placeholder="https://your-project.supabase.co"
+                            className="input-field w-full"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-dark-300 mb-2">
+                            Anon Key
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showSupabaseKey ? 'text' : 'password'}
+                                value={supabaseKey}
+                                onChange={(e) => setSupabaseKey(e.target.value)}
+                                placeholder="eyJ..."
+                                className="input-field w-full pr-10"
+                            />
+                            <button
+                                onClick={() => setShowSupabaseKey(!showSupabaseKey)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white"
+                            >
+                                {showSupabaseKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={saveSupabaseConfig}
+                        className="btn-primary w-full flex items-center justify-center gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        Save Configuration
+                    </button>
+
+                    <p className="text-xs text-dark-500">
+                        Get your Supabase credentials from{' '}
+                        <a href="https://supabase.com" target="_blank" className="text-primary-400 hover:underline">
+                            supabase.com
+                        </a>
+                        {' '}→ Project Settings → API
+                    </p>
+                </div>
             </div>
 
             {/* Appearance */}

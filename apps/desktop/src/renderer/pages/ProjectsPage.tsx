@@ -375,15 +375,3 @@ function ProjectModal({
         </div>
     );
 }
-
-type Project = {
-    id: number;
-    name: string;
-    description: string;
-    color: string;
-    hourlyRate: number;
-    totalMinutes: number;
-    status: 'active' | 'completed' | 'archived';
-    client?: string;
-    createdAt: string;
-};

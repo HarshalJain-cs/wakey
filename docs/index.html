@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wakey - AI-Native Productivity Tracker</title>
+    <meta name="description" content="Wakey is an AI-powered productivity platform with activity tracking, focus sessions, AI insights, and more. Download for Windows.">
+    <meta name="keywords" content="productivity, time tracking, focus, AI, pomodoro, windows app">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Wakey - AI-Native Productivity Tracker">
+    <meta property="og:description" content="Track your productivity, stay focused, and get AI-powered insights.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="./assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./assets/favicon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #14b8a6;
+            --primary-hover: #0d9488;
+            --dark-900: #0f172a;
+            --dark-800: #1e293b;
+            --dark-700: #334155;
+            --dark-400: #94a3b8;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--dark-900);
+            color: var(--white);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--dark-700);
+            z-index: 100;
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 72px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #06b6d4);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--dark-400);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--white);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--dark-700);
+            color: var(--white);
+        }
+
+        .btn-secondary:hover {
+            background: var(--dark-800);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, var(--primary), #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--dark-400);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .hero-image {
+            margin-top: 60px;
+            border-radius: 16px;
+            border: 1px solid var(--dark-700);
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: auto;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .section-title p {
+            color: var(--dark-400);
+            font-size: 18px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--dark-800);
+            border: 1px solid var(--dark-700);
+            border-radius: 16px;
+            padding: 32px;
+            transition: border-color 0.2s;
+        }
+
+        .feature-card:hover {
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(20, 184, 166, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: var(--dark-400);
+            font-size: 15px;
+        }
+
+        /* Download Section */
+        .download {
+            padding: 100px 0;
+            background: var(--dark-800);
+        }
+
+        .download-content {
+            text-align: center;
+        }
+
+        .download h2 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .download p {
+            color: var(--dark-400);
+            font-size: 18px;
+            max-width: 500px;
+            margin: 0 auto 40px;
+        }
+
+        .download-options {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .download-card {
+            background: var(--dark-900);
+            border: 1px solid var(--dark-700);
+            border-radius: 16px;
+            padding: 24px 32px;
+            text-align: left;
+            width: 280px;
+        }
+
+        .download-card h4 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .download-card .version {
+            color: var(--dark-400);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 60px 0;
+            border-top: 1px solid var(--dark-700);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--dark-400);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .footer-links a:hover {
+            color: var(--white);
+        }
+
+        .copyright {
+            color: var(--dark-400);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 24px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <div class="logo">
+                <div class="logo-icon">W</div>
+                Wakey
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#download">Download</a></li>
+                <li><a href="https://github.com/HarshalJain-cs/wakey" target="_blank">GitHub</a></li>
+            </ul>
+            <a href="#download" class="btn btn-primary">
+                Download for Windows
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>
+                Track Productivity.<br>
+                <span>Stay Focused.</span>
+            </h1>
+            <p>
+                Wakey is an AI-native productivity platform that tracks your activity,
+                helps you focus, and provides intelligent insights to boost your productivity.
+            </p>
+            <div class="hero-buttons">
+                <a href="#download" class="btn btn-primary">
+                    Download Free
+                </a>
+                <a href="#features" class="btn btn-secondary">
+                    Learn More
+                </a>
+            </div>
+            <div class="hero-image">
+                <img src="./assets/screenshot.png" alt="Wakey Dashboard" />
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Everything you need to stay productive</h2>
+                <p>Powerful features designed for traders, developers, and knowledge workers</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">&#128337;</div>
+                    <h3>Activity Tracking</h3>
+                    <p>Automatically track which apps and windows you use throughout the day.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#127919;</div>
+                    <h3>Focus Sessions</h3>
+                    <p>Pomodoro timer with customizable durations and distraction blocking.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#129302;</div>
+                    <h3>AI Insights</h3>
+                    <p>Get personalized productivity tips powered by AI analysis.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128200;</div>
+                    <h3>Analytics</h3>
+                    <p>Visualize your productivity trends with detailed charts and reports.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128221;</div>
+                    <h3>Task Management</h3>
+                    <p>Organize your work with tasks, projects, and goals.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#9729;&#65039;</div>
+                    <h3>Cloud Sync</h3>
+                    <p>Sync your data across devices with optional cloud backup.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-content">
+                <h2>Download Wakey</h2>
+                <p>Free to download. No credit card required. Get started in minutes.</p>
+
+                <div class="download-options">
+                    <div class="download-card">
+                        <h4>Windows Installer</h4>
+                        <div class="version">v0.1.0 | 64-bit</div>
+                        <a href="https://github.com/HarshalJain-cs/wakey/releases/latest/download/Wakey-0.1.0-x64.exe" class="btn btn-primary" style="width: 100%;">
+                            Download .exe
+                        </a>
+                    </div>
+
+                    <div class="download-card">
+                        <h4>Portable Version</h4>
+                        <div class="version">v0.1.0 | No install needed</div>
+                        <a href="https://github.com/HarshalJain-cs/wakey/releases/latest/download/Wakey-0.1.0-Portable.exe" class="btn btn-secondary" style="width: 100%;">
+                            Download Portable
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="logo">
+                    <div class="logo-icon" style="width: 32px; height: 32px; font-size: 14px;">W</div>
+                    Wakey
+                </div>
+                <ul class="footer-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#download">Download</a></li>
+                    <li><a href="https://github.com/HarshalJain-cs/wakey" target="_blank">GitHub</a></li>
+                    <li><a href="mailto:support@wakey.app">Support</a></li>
+                </ul>
+                <div class="copyright">
+                    &copy; 2025 Wakey. All rights reserved.
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

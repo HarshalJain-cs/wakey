@@ -84,6 +84,12 @@ interface StoreSchema {
         trackUrls: boolean;
         idleThreshold: number;
         customDistractions: string[];
+        // Supabase configuration
+        supabaseUrl: string;
+        supabaseAnonKey: string;
+        requireAuth: boolean;
+        // Additional auth-related settings can be stored dynamically
+        [key: string]: unknown;
     };
     activities: Activity[];
     focusSessions: FocusSession[];
@@ -112,6 +118,11 @@ const store = new Store<StoreSchema>({
             trackUrls: true,
             idleThreshold: 5,
             customDistractions: [],
+            // Supabase config (can be overridden via env or settings)
+            supabaseUrl: process.env.VITE_SUPABASE_URL || '',
+            supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY || '',
+            // Auth requirement (set to false to skip login during development)
+            requireAuth: false,
         },
         activities: [],
         focusSessions: [],
@@ -177,7 +188,6 @@ function getToday(): string {
 function logActivity(appName: string, windowTitle: string): void {
     const activities = store.get('activities', []);
     const nextIds = store.get('nextIds');
-    const today = getToday();
 
     // Update duration if same app
     if (lastAppName === appName && currentActivityId && currentActivityStart) {
