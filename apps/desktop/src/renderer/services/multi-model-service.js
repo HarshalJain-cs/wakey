@@ -1,0 +1,341 @@
+// Multi-Model AI Service with Consensus Generation
+// Supports: Groq, Ollama, OpenAI-compatible, Claude
+// Default providers
+const DEFAULT_PROVIDERS = [
+    {
+        name: 'groq',
+        model: 'llama3-8b-8192',
+        priority: 1,
+        enabled: true,
+        baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+    },
+    {
+        name: 'ollama',
+        model: 'llama3.2',
+        priority: 2,
+        enabled: true,
+        baseUrl: 'http://localhost:11434/api/generate',
+    },
+    {
+        name: 'openai',
+        model: 'gpt-3.5-turbo',
+        priority: 3,
+        enabled: false,
+        baseUrl: 'https://api.openai.com/v1/chat/completions',
+    },
+    {
+        name: 'claude',
+        model: 'claude-3-haiku-20240307',
+        priority: 4,
+        enabled: false,
+        baseUrl: 'https://api.anthropic.com/v1/messages',
+    },
+];
+let providers = [...DEFAULT_PROVIDERS];
+let apiKeys = {};
+// Provider configuration
+export function setProviderApiKey(providerName, key) {
+    apiKeys[providerName] = key;
+}
+export function configureProvider(name, config) {
+    const idx = providers.findIndex(p => p.name === name);
+    if (idx !== -1) {
+        providers[idx] = { ...providers[idx], ...config };
+    }
+}
+export function enableProvider(name, enabled) {
+    const idx = providers.findIndex(p => p.name === name);
+    if (idx !== -1) {
+        providers[idx].enabled = enabled;
+    }
+}
+export function getProviders() {
+    return [...providers];
+}
+export function getEnabledProviders() {
+    return providers.filter(p => p.enabled).sort((a, b) => a.priority - b.priority);
+}
+// Individual provider calls
+async function callGroq(messages, maxTokens = 200) {
+    const key = apiKeys['groq'];
+    if (!key)
+        throw new Error('Groq API key not set');
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: providers.find(p => p.name === 'groq')?.model || 'llama3-8b-8192',
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`Groq API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.choices[0]?.message?.content || '';
+}
+async function callOllama(prompt) {
+    const model = providers.find(p => p.name === 'ollama')?.model || 'llama3.2';
+    const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model,
+            prompt,
+            stream: false,
+        }),
+    });
+    if (!response.ok) {
+        throw new Error('Ollama not available');
+    }
+    const data = await response.json();
+    return data.response || '';
+}
+async function callOpenAI(messages, maxTokens = 200) {
+    const key = apiKeys['openai'];
+    if (!key)
+        throw new Error('OpenAI API key not set');
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: providers.find(p => p.name === 'openai')?.model || 'gpt-3.5-turbo',
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.choices[0]?.message?.content || '';
+}
+async function callClaude(messages, maxTokens = 200) {
+    const key = apiKeys['claude'];
+    if (!key)
+        throw new Error('Claude API key not set');
+    const systemMessage = messages.find(m => m.role === 'system')?.content || '';
+    const userMessages = messages.filter(m => m.role !== 'system');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: providers.find(p => p.name === 'claude')?.model || 'claude-3-haiku-20240307',
+            max_tokens: maxTokens,
+            system: systemMessage,
+            messages: userMessages.map(m => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.content,
+            })),
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`Claude API error: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.content[0]?.text || '';
+}
+// Query a single provider
+async function queryProvider(provider, messages, maxTokens) {
+    const startTime = Date.now();
+    try {
+        let response;
+        switch (provider.name) {
+            case 'groq':
+                response = await callGroq(messages, maxTokens);
+                break;
+            case 'ollama':
+                const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+                response = await callOllama(prompt);
+                break;
+            case 'openai':
+                response = await callOpenAI(messages, maxTokens);
+                break;
+            case 'claude':
+                response = await callClaude(messages, maxTokens);
+                break;
+            default:
+                throw new Error(`Unknown provider: ${provider.name}`);
+        }
+        return {
+            provider: provider.name,
+            model: provider.model,
+            response,
+            confidence: 1.0,
+            latencyMs: Date.now() - startTime,
+        };
+    }
+    catch (error) {
+        return {
+            provider: provider.name,
+            model: provider.model,
+            response: '',
+            confidence: 0,
+            latencyMs: Date.now() - startTime,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        };
+    }
+}
+// Query multiple providers in parallel
+export async function queryMultipleProviders(messages, maxTokens = 200) {
+    const enabledProviders = getEnabledProviders();
+    if (enabledProviders.length === 0) {
+        throw new Error('No AI providers enabled');
+    }
+    const queries = enabledProviders.map(provider => queryProvider(provider, messages, maxTokens));
+    const responses = await Promise.allSettled(queries);
+    return responses
+        .filter((r) => r.status === 'fulfilled')
+        .map(r => r.value);
+}
+// Calculate text similarity (simple Jaccard)
+function calculateSimilarity(text1, text2) {
+    const words1 = new Set(text1.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const words2 = new Set(text2.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    return union.size > 0 ? intersection.size / union.size : 0;
+}
+// Generate consensus from multiple responses
+export async function generateConsensus(prompt, systemPrompt = '', maxTokens = 200) {
+    const messages = [];
+    if (systemPrompt) {
+        messages.push({ role: 'system', content: systemPrompt });
+    }
+    messages.push({ role: 'user', content: prompt });
+    const responses = await queryMultipleProviders(messages, maxTokens);
+    const validResponses = responses.filter(r => !r.error && r.response);
+    if (validResponses.length === 0) {
+        return {
+            consensus: 'Unable to generate response. All providers failed.',
+            confidence: 0,
+            responses,
+            reasoning: 'No valid responses from any provider.',
+            votingBreakdown: [],
+        };
+    }
+    if (validResponses.length === 1) {
+        const r = validResponses[0];
+        return {
+            consensus: r.response,
+            confidence: 0.7, // Lower confidence with single source
+            responses,
+            reasoning: `Single provider response from ${r.provider}.`,
+            votingBreakdown: [{ provider: r.provider, weight: 1.0 }],
+        };
+    }
+    // Calculate weights based on priority and latency
+    const weights = validResponses.map(r => {
+        const provider = providers.find(p => p.name === r.provider);
+        const priorityWeight = provider ? (5 - provider.priority) / 4 : 0.5;
+        const latencyWeight = Math.max(0.1, 1 - (r.latencyMs / 5000)); // Faster = better
+        return {
+            provider: r.provider,
+            weight: (priorityWeight * 0.6 + latencyWeight * 0.4),
+        };
+    });
+    // Normalize weights
+    const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+    weights.forEach(w => w.weight /= totalWeight);
+    // Calculate similarity between responses
+    const similarities = [];
+    for (let i = 0; i < validResponses.length; i++) {
+        let avgSimilarity = 0;
+        for (let j = 0; j < validResponses.length; j++) {
+            if (i !== j) {
+                avgSimilarity += calculateSimilarity(validResponses[i].response, validResponses[j].response);
+            }
+        }
+        similarities.push(avgSimilarity / (validResponses.length - 1));
+    }
+    // Select the response with highest weighted score
+    let bestScore = -1;
+    let bestResponse = validResponses[0];
+    for (let i = 0; i < validResponses.length; i++) {
+        const score = weights[i].weight * 0.5 + similarities[i] * 0.5;
+        if (score > bestScore) {
+            bestScore = score;
+            bestResponse = validResponses[i];
+        }
+    }
+    // Calculate overall confidence
+    const avgSimilarity = similarities.reduce((sum, s) => sum + s, 0) / similarities.length;
+    const confidence = Math.min(0.95, 0.5 + avgSimilarity * 0.5);
+    // Generate reasoning
+    const agreementLevel = avgSimilarity > 0.7 ? 'high' : avgSimilarity > 0.4 ? 'moderate' : 'low';
+    const reasoning = `${validResponses.length} providers responded with ${agreementLevel} agreement. ` +
+        `Best response from ${bestResponse.provider} (${bestResponse.model}) ` +
+        `with ${Math.round(confidence * 100)}% confidence.`;
+    return {
+        consensus: bestResponse.response,
+        confidence,
+        responses,
+        reasoning,
+        votingBreakdown: weights,
+    };
+}
+// Simple single-provider query with fallback
+export async function queryWithFallback(prompt, systemPrompt = '', maxTokens = 200) {
+    const messages = [];
+    if (systemPrompt) {
+        messages.push({ role: 'system', content: systemPrompt });
+    }
+    messages.push({ role: 'user', content: prompt });
+    const enabledProviders = getEnabledProviders();
+    for (const provider of enabledProviders) {
+        try {
+            const response = await queryProvider(provider, messages, maxTokens);
+            if (!response.error && response.response) {
+                return response.response;
+            }
+        }
+        catch {
+            continue;
+        }
+    }
+    throw new Error('All AI providers failed');
+}
+const modelStats = new Map();
+export function recordModelPerformance(provider, success, latencyMs, userRating) {
+    let stats = modelStats.get(provider);
+    if (!stats) {
+        stats = {
+            provider,
+            totalQueries: 0,
+            successCount: 0,
+            avgLatencyMs: 0,
+            userRatings: [],
+        };
+        modelStats.set(provider, stats);
+    }
+    stats.totalQueries++;
+    if (success)
+        stats.successCount++;
+    stats.avgLatencyMs = (stats.avgLatencyMs * (stats.totalQueries - 1) + latencyMs) / stats.totalQueries;
+    if (userRating !== undefined) {
+        stats.userRatings.push(userRating);
+    }
+}
+export function getModelStats() {
+    return Array.from(modelStats.values());
+}
+export function getAverageUserRating(provider) {
+    const stats = modelStats.get(provider);
+    if (!stats || stats.userRatings.length === 0)
+        return null;
+    return stats.userRatings.reduce((sum, r) => sum + r, 0) / stats.userRatings.length;
+}
+//# sourceMappingURL=multi-model-service.js.map
