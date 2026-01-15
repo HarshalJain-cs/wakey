@@ -205,8 +205,8 @@ export default function GoalsPage() {
                                             setCustomTarget(template.defaultTarget);
                                         }}
                                         className={`p-4 rounded-xl border text-left transition-all ${selectedTemplate?.type === template.type
-                                                ? 'border-primary-500 bg-primary-500/10'
-                                                : 'border-dark-600 bg-dark-700/50 hover:border-dark-500'
+                                            ? 'border-primary-500 bg-primary-500/10'
+                                            : 'border-dark-600 bg-dark-700/50 hover:border-dark-500'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3 mb-2">
@@ -224,11 +224,39 @@ export default function GoalsPage() {
                         </div>
 
                         {selectedTemplate && (
-                            <div className="p-6 border-t border-dark-700 bg-dark-900/50">
+                            <div className="p-6 border-t border-dark-700 bg-dark-900/50 space-y-4">
+                                {/* Template Details */}
+                                <div className="bg-dark-800 rounded-xl p-4 border border-dark-700">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="text-3xl">{selectedTemplate.icon}</span>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white">{selectedTemplate.name}</h3>
+                                            <span className={`text-xs px-2 py-0.5 rounded ${selectedTemplate.isMaximum ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                                                {selectedTemplate.isMaximum ? '📉 Maximum Limit' : '📈 Minimum Target'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p className="text-dark-300 text-sm mb-3">{selectedTemplate.longDescription}</p>
+
+                                    {/* Objectives */}
+                                    <div className="bg-dark-700/50 rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-dark-400 uppercase mb-2">Objectives</h4>
+                                        <ul className="space-y-1">
+                                            {selectedTemplate.objectives.map((obj, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-sm text-dark-300">
+                                                    <span className="text-primary-400 mt-0.5">✓</span>
+                                                    {obj}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Target Configuration */}
                                 <div className="flex items-center gap-4">
                                     <div className="flex-1">
                                         <label className="block text-sm text-dark-400 mb-2">
-                                            Set your target for {selectedTemplate.name}
+                                            Set your {selectedTemplate.isMaximum ? 'maximum' : 'minimum'} target
                                         </label>
                                         <div className="flex items-center gap-3">
                                             <input

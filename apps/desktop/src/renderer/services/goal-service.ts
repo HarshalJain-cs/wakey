@@ -57,10 +57,17 @@ export interface GoalTemplate {
     type: GoalType;
     name: string;
     description: string;
+    longDescription: string;
+    objectives: string[];
     icon: string;
     defaultTarget: number;
     unit: string;
     color: string;
+    isMaximum: boolean; // true = goal is to stay UNDER target, false = goal is to reach target
+    customizable: {
+        target: boolean;
+        categories: boolean;
+    };
 }
 
 // ============================================
@@ -71,74 +78,106 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'minimum-work-hours',
         name: 'Minimum Work Hours',
-        description: 'Set a goal for the minimum number of hours you want to work each day. Track your daily work time and ensure you\'re putting in the hours needed to achieve your goals.',
+        description: 'Set a goal for the minimum number of hours you want to work each day.',
+        longDescription: 'Track your daily work time and ensure you\'re putting in the hours needed to achieve your goals. This helps maintain consistency and accountability in your work schedule.',
+        objectives: ['Achieve more than a specified amount of work hours on a daily basis.'],
         icon: '⏰',
         defaultTarget: 6,
         unit: 'hours',
-        color: '#3b82f6', // blue
+        color: '#3b82f6',
+        isMaximum: false,
+        customizable: { target: true, categories: false },
     },
     {
         type: 'maximize-focus',
         name: 'Maximizing Focus Time',
-        description: 'Increase your deep work time. It\'s a skill that allows you to quickly master complicated information and produce better results in less time. Eliminate distractions and enter flow state.',
+        description: 'Increase the amount of time for deep work.',
+        longDescription: 'It\'s a skill that allows you to quickly master complicated information and produce better results in less time. Deep work is the ability to focus without distraction on a cognitively demanding task. Eliminate distractions and enter flow state to maximize your productivity.',
+        objectives: ['Achieve more than a specified amount of focused work time on a daily basis.'],
         icon: '🎯',
         defaultTarget: 4,
         unit: 'hours',
-        color: '#14b8a6', // teal
+        color: '#14b8a6',
+        isMaximum: false,
+        customizable: { target: true, categories: false },
     },
     {
         type: 'six-hour-workday',
         name: 'The 6-Hour Work Day',
-        description: 'The eight-hour workday is a relic of the past. Research shows six hours makes more sense for the type of knowledge work we do today. Work smarter, not longer.',
+        description: 'The eight-hour workday is a relic of the past.',
+        longDescription: 'It\'s argued that the six-hour workday makes more sense for the type of life we live today. The internet fundamentally changed the way we live, work, and play, and the nature of work itself has transitioned from algorithmic tasks to heuristic ones that require critical thinking, problem-solving, and creativity. Six hours is approximately the total amount of time that we can truly be productive with these high cognitive tasks.',
+        objectives: ['Achieve less than a specified amount of work hours on a daily basis.'],
         icon: '⚡',
         defaultTarget: 6,
         unit: 'hours max',
-        color: '#f59e0b', // amber
+        color: '#f59e0b',
+        isMaximum: true,
+        customizable: { target: true, categories: false },
     },
     {
         type: 'limit-distractions',
         name: 'Limiting Distracting Categories',
-        description: 'Nothing zaps productivity and wastes time like social media does. This goal helps you minimize time spent on distracting websites and apps, reclaiming hours of your day.',
+        description: 'Nothing zaps productivity and time wasted like social media does.',
+        longDescription: 'This goal helps you minimize time spent on distracting categories. By default, it tracks your daily time spent on social media sites and sets 30 minutes as the goal maximum. However, you can customize the time category tracked as well as add multiple categories that count towards the goal.',
+        objectives: ['Achieve less than a specified amount of time spent in a time category on a daily basis.'],
         icon: '🚫',
         defaultTarget: 30,
         unit: 'minutes max',
-        color: '#ef4444', // red
+        color: '#ef4444',
+        isMaximum: true,
+        customizable: { target: true, categories: true },
     },
     {
         type: 'more-breaks',
         name: 'Taking More Breaks',
-        description: 'Increase the amount of time you spend on breaks at work. Regular breaks improve focus, creativity, and prevent burnout. Track your break time and hold yourself accountable.',
+        description: 'Increase the amount of time you spend on break at work.',
+        longDescription: 'This goal helps you keep track of your break time and hold yourself accountable. Studies show that taking frequent short breaks throughout the day improves your cognition and prevents long-term burnout. It\'s easy to not take breaks due to a fear of losing momentum, especially if you feel like you are on a roll crushing task after task. However, we have a limited capacity for concentrating over extended time periods, and though we may not be practiced at recognizing the symptoms of fatigue, they unavoidably derail our work.',
+        objectives: ['Achieve more than a specified amount of break time on a daily basis.'],
         icon: '☕',
         defaultTarget: 10,
         unit: '% of work time',
-        color: '#8b5cf6', // purple
+        color: '#8b5cf6',
+        isMaximum: false,
+        customizable: { target: true, categories: false },
     },
     {
         type: 'maximize-category',
         name: 'Maximizing a Time Category',
-        description: 'Track any time category and set a daily goal minimum for it. Perfect for maximizing productive behaviors like coding, writing, designing, learning, or any skill you want to develop.',
+        description: 'Track any time category and set a daily goal minimum for it.',
+        longDescription: 'This is useful for maximizing productive behaviors like coding, writing, designing, learning, or any skill you want to develop. You can customize the time category tracked as well as add multiple categories that count towards the goal. Perfect for holding yourself accountable to specific activities.',
+        objectives: ['Achieve more than a specified amount of time spent in a time category on a daily basis.'],
         icon: '📊',
         defaultTarget: 3,
         unit: 'hours',
-        color: '#22c55e', // green
+        color: '#22c55e',
+        isMaximum: false,
+        customizable: { target: true, categories: true },
     },
     {
         type: 'reduce-meetings',
         name: 'Reducing Meeting Time',
-        description: 'Meetings can be one of the biggest productivity killers for you and others. If you\'re responsible for scheduling meetings, use this goal to minimize them and protect your deep work time.',
+        description: 'Meetings can be one of the biggest productivity killers.',
+        longDescription: 'Meetings can be one of the biggest productivity killers for you and for others. If you are responsible for scheduling meetings, use this goal to help minimize them and protect your deep work time. Unnecessary meetings fragment your schedule and prevent the long stretches of uninterrupted work needed for complex tasks.',
+        objectives: ['Achieve less than a specified amount of meeting time on a daily basis.'],
         icon: '📉',
         defaultTarget: 2,
         unit: 'hours max',
-        color: '#f97316', // orange
+        color: '#f97316',
+        isMaximum: true,
+        customizable: { target: true, categories: false },
     },
     {
         type: 'increase-meetings',
         name: 'Increasing Meeting Time',
-        description: 'For some professions, meeting time equals productivity. If you\'re an investor, salesperson, or manager, maximizing face-time with people directly correlates to your success.',
+        description: 'For a few professions, meeting time is equivalent to productivity.',
+        longDescription: 'If you\'re an investor, salesperson, or manager, maximizing your meeting time with people correlates to success. Face-to-face interactions build relationships, close deals, and drive business forward. Use this goal to ensure you\'re spending enough time connecting with clients, prospects, and team members.',
+        objectives: ['Achieve more than a specified amount of meeting time on a daily basis.'],
         icon: '📈',
         defaultTarget: 4,
         unit: 'hours',
-        color: '#06b6d4', // cyan
+        color: '#06b6d4',
+        isMaximum: false,
+        customizable: { target: true, categories: false },
     },
 ];
 
