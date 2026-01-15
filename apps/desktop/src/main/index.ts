@@ -425,18 +425,39 @@ function deleteTask(id: number): void {
     store.set('tasks', tasks);
 }
 
-// Tracking
-function startTracking(): void {
+// Tracking with real active-win detection
+async function startTracking(): Promise<void> {
     if (trackingInterval) return;
     console.log('Starting activity tracking...');
 
-    trackingInterval = setInterval(() => {
-        // Placeholder tracking - logs Wakey app
-        if (mainWindow) {
-            const title = mainWindow.isFocused() ? 'Dashboard' : 'Background';
-            logActivity('Wakey', title);
+    // Dynamic import of active-win (ESM module)
+    let activeWin: typeof import('active-win') | null = null;
+    try {
+        activeWin = await import('active-win');
+    } catch (error) {
+        console.warn('active-win not available, using fallback tracking');
+    }
+
+    trackingInterval = setInterval(async () => {
+        try {
+            if (activeWin) {
+                // Use real active window detection
+                const window = await activeWin.default();
+                if (window) {
+                    const appName = window.owner?.name || window.title || 'Unknown';
+                    const windowTitle = window.title || '';
+                    logActivity(appName, windowTitle);
+                }
+            } else {
+                // Fallback: Track Wakey itself when active-win is unavailable
+                if (mainWindow?.isFocused()) {
+                    logActivity('Wakey', 'Dashboard');
+                }
+            }
+        } catch (error) {
+            console.error('Tracking error:', error);
         }
-    }, 10000);
+    }, 5000); // Poll every 5 seconds for better accuracy
 
     isTracking = true;
     mainWindow?.webContents.send('tracking-toggle', true);

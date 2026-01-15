@@ -18,7 +18,9 @@ import {
     GraduationCap,
     Globe,
     Cloud,
-    Trophy
+    Trophy,
+    Target,
+    Music
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,6 +34,8 @@ const navItems = [
     { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
     { path: '/projects', icon: FolderKanban, label: 'Projects' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/goals', icon: Target, label: 'Goals' },
+    { path: '/music', icon: Music, label: 'Music' },
     { path: '/research', icon: Globe, label: 'Research' },
     { path: '/integrations', icon: Plug, label: 'Integrations' },
     { path: '/trader', icon: TrendingUp, label: 'Trader' },

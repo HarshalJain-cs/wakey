@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX } from 'lucide-react';
+import { audioService } from '../services/audio-service';
 
 interface TimerState {
     isRunning: boolean;
@@ -115,7 +116,10 @@ export default function FocusPage() {
             }
 
             if (soundEnabled) {
-                // Play notification sound
+                // Play sound effect based on mode
+                audioService.playEffect(timer.mode === 'focus' ? 'timer-complete' : 'break-end');
+
+                // Also show notification
                 new Notification(timer.mode === 'focus' ? '🎉 Focus Complete!' : '☕ Break Over!', {
                     body: timer.mode === 'focus' ? 'Time for a break!' : 'Ready to focus again?',
                 });

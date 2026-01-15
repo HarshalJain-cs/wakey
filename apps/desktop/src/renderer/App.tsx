@@ -22,6 +22,8 @@ import ResearchPage from './pages/ResearchPage';
 import CloudSyncPage from './pages/CloudSyncPage';
 import AchievementsPage from './pages/AchievementsPage';
 import AuthPage from './pages/AuthPage';
+import GoalsPage from './pages/GoalsPage';
+import MusicPage from './pages/MusicPage';
 import * as supabaseAuth from './services/supabase-auth';
 
 export default function App() {
@@ -152,6 +154,8 @@ export default function App() {
                         <Route path="/flashcards" element={<FlashcardsPage />} />
                         <Route path="/cloud-sync" element={<CloudSyncPage />} />
                         <Route path="/achievements" element={<AchievementsPage />} />
+                        <Route path="/goals" element={<GoalsPage />} />
+                        <Route path="/music" element={<MusicPage />} />
                         <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
                     </Routes>
                 </main>
