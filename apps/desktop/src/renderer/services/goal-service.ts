@@ -71,7 +71,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'minimum-work-hours',
         name: 'Minimum Work Hours',
-        description: 'Set a goal for the minimum number of hours you want to work each day.',
+        description: 'Set a goal for the minimum number of hours you want to work each day. Track your daily work time and ensure you\'re putting in the hours needed to achieve your goals.',
         icon: '⏰',
         defaultTarget: 6,
         unit: 'hours',
@@ -80,7 +80,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'maximize-focus',
         name: 'Maximizing Focus Time',
-        description: 'Increase the amount of time for deep work. Master complicated information faster.',
+        description: 'Increase your deep work time. It\'s a skill that allows you to quickly master complicated information and produce better results in less time. Eliminate distractions and enter flow state.',
         icon: '🎯',
         defaultTarget: 4,
         unit: 'hours',
@@ -89,7 +89,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'six-hour-workday',
         name: 'The 6-Hour Work Day',
-        description: 'The eight-hour workday is a relic. Six hours makes more sense for modern life.',
+        description: 'The eight-hour workday is a relic of the past. Research shows six hours makes more sense for the type of knowledge work we do today. Work smarter, not longer.',
         icon: '⚡',
         defaultTarget: 6,
         unit: 'hours max',
@@ -98,7 +98,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'limit-distractions',
         name: 'Limiting Distracting Categories',
-        description: 'Minimize time spent on social media and entertainment websites.',
+        description: 'Nothing zaps productivity and wastes time like social media does. This goal helps you minimize time spent on distracting websites and apps, reclaiming hours of your day.',
         icon: '🚫',
         defaultTarget: 30,
         unit: 'minutes max',
@@ -107,7 +107,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'more-breaks',
         name: 'Taking More Breaks',
-        description: 'Increase time spent on break. Track break time and hold yourself accountable.',
+        description: 'Increase the amount of time you spend on breaks at work. Regular breaks improve focus, creativity, and prevent burnout. Track your break time and hold yourself accountable.',
         icon: '☕',
         defaultTarget: 10,
         unit: '% of work time',
@@ -116,7 +116,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'maximize-category',
         name: 'Maximizing a Time Category',
-        description: 'Track any category and set a daily minimum. Great for coding, writing, etc.',
+        description: 'Track any time category and set a daily goal minimum for it. Perfect for maximizing productive behaviors like coding, writing, designing, learning, or any skill you want to develop.',
         icon: '📊',
         defaultTarget: 3,
         unit: 'hours',
@@ -125,7 +125,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'reduce-meetings',
         name: 'Reducing Meeting Time',
-        description: 'Meetings can kill productivity. Use this goal to minimize them.',
+        description: 'Meetings can be one of the biggest productivity killers for you and others. If you\'re responsible for scheduling meetings, use this goal to minimize them and protect your deep work time.',
         icon: '📉',
         defaultTarget: 2,
         unit: 'hours max',
@@ -134,7 +134,7 @@ export const GOAL_TEMPLATES: GoalTemplate[] = [
     {
         type: 'increase-meetings',
         name: 'Increasing Meeting Time',
-        description: 'For investors and salespeople, meeting time correlates with success.',
+        description: 'For some professions, meeting time equals productivity. If you\'re an investor, salesperson, or manager, maximizing face-time with people directly correlates to your success.',
         icon: '📈',
         defaultTarget: 4,
         unit: 'hours',
