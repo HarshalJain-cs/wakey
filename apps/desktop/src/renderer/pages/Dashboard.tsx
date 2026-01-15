@@ -49,6 +49,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
     // Load saved layout
     useEffect(() => {
         const loadLayout = async () => {
+            if (!window.wakey) return;
             try {
                 const settings = await window.wakey.getSettings();
                 if (settings.dashboardLayout) {
@@ -63,6 +64,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
 
     // Save layout
     const saveLayout = useCallback(async (newWidgets: WidgetConfig[]) => {
+        if (!window.wakey) return;
         try {
             await window.wakey.setSetting('dashboardLayout', newWidgets);
         } catch (error) {

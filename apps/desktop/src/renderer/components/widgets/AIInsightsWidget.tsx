@@ -18,6 +18,15 @@ export default function AIInsightsWidget() {
 
     const generateInsights = async () => {
         setLoading(true);
+        if (!window.wakey) {
+            setInsights([{
+                id: 1,
+                text: 'Start tracking to get personalized AI insights about your productivity!',
+                type: 'tip',
+            }]);
+            setLoading(false);
+            return;
+        }
         try {
             const stats = await window.wakey.getTodayStats();
 

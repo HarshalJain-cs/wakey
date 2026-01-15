@@ -453,3 +453,214 @@ export function getAverageUserRating(provider: string): number | null {
     if (!stats || stats.userRatings.length === 0) return null;
     return stats.userRatings.reduce((sum, r) => sum + r, 0) / stats.userRatings.length;
 }
+
+// ============================================
+// Rate Limiting with Exponential Backoff
+// ============================================
+
+interface RateLimitState {
+    lastRequestTime: number;
+    consecutiveErrors: number;
+    isRateLimited: boolean;
+    rateLimitUntil: number;
+}
+
+const rateLimitState: Map<string, RateLimitState> = new Map();
+
+/**
+ * Configuration for rate limiting
+ */
+interface RateLimitConfig {
+    minDelayMs: number;
+    maxDelayMs: number;
+    backoffMultiplier: number;
+    maxRetries: number;
+}
+
+const DEFAULT_RATE_LIMIT_CONFIG: RateLimitConfig = {
+    minDelayMs: 100,
+    maxDelayMs: 30000,
+    backoffMultiplier: 2,
+    maxRetries: 3,
+};
+
+/**
+ * Calculates backoff delay based on consecutive errors.
+ */
+function calculateBackoff(consecutiveErrors: number, config = DEFAULT_RATE_LIMIT_CONFIG): number {
+    const delay = config.minDelayMs * Math.pow(config.backoffMultiplier, consecutiveErrors);
+    return Math.min(delay, config.maxDelayMs);
+}
+
+/**
+ * Checks if we should wait before making a request to a provider.
+ */
+export function shouldWait(providerName: string): { wait: boolean; delayMs: number } {
+    const state = rateLimitState.get(providerName);
+    if (!state) return { wait: false, delayMs: 0 };
+
+    if (state.isRateLimited && Date.now() < state.rateLimitUntil) {
+        return { wait: true, delayMs: state.rateLimitUntil - Date.now() };
+    }
+
+    if (state.consecutiveErrors > 0) {
+        const timeSinceLastRequest = Date.now() - state.lastRequestTime;
+        const backoff = calculateBackoff(state.consecutiveErrors);
+        if (timeSinceLastRequest < backoff) {
+            return { wait: true, delayMs: backoff - timeSinceLastRequest };
+        }
+    }
+
+    return { wait: false, delayMs: 0 };
+}
+
+/**
+ * Records a request result for rate limiting.
+ */
+export function recordRequestResult(providerName: string, success: boolean, errorCode?: number): void {
+    let state = rateLimitState.get(providerName);
+    if (!state) {
+        state = { lastRequestTime: 0, consecutiveErrors: 0, isRateLimited: false, rateLimitUntil: 0 };
+        rateLimitState.set(providerName, state);
+    }
+
+    state.lastRequestTime = Date.now();
+
+    if (success) {
+        state.consecutiveErrors = 0;
+        state.isRateLimited = false;
+    } else {
+        state.consecutiveErrors++;
+
+        // Handle rate limit errors (429)
+        if (errorCode === 429) {
+            state.isRateLimited = true;
+            state.rateLimitUntil = Date.now() + 60000; // Wait 1 minute
+        }
+    }
+}
+
+/**
+ * Queries a provider with rate limiting and retry logic.
+ */
+export async function queryWithRetry(
+    prompt: string,
+    systemPrompt = '',
+    maxTokens = 200,
+    config = DEFAULT_RATE_LIMIT_CONFIG
+): Promise<string> {
+    const messages: ChatMessage[] = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
+
+    const enabledProviders = getEnabledProviders();
+
+    for (const provider of enabledProviders) {
+        let retries = 0;
+
+        while (retries < config.maxRetries) {
+            // Check rate limit
+            const { wait, delayMs } = shouldWait(provider.name);
+            if (wait) {
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+
+            try {
+                const response = await queryProvider(provider, messages, maxTokens);
+                recordRequestResult(provider.name, !response.error);
+
+                if (!response.error && response.response) {
+                    recordModelPerformance(provider.name, true, response.latencyMs);
+                    return response.response;
+                }
+
+                retries++;
+            } catch (error) {
+                recordRequestResult(provider.name, false, error instanceof Error && error.message.includes('429') ? 429 : undefined);
+                retries++;
+            }
+        }
+    }
+
+    throw new Error('All providers failed after retries');
+}
+
+// ============================================
+// Streaming Support (Groq)
+// ============================================
+
+/**
+ * Callback for handling streaming chunks.
+ */
+export type StreamCallback = (chunk: string, done: boolean) => void;
+
+/**
+ * Queries Groq with streaming support.
+ * Calls the callback for each received chunk.
+ */
+export async function queryWithStreaming(
+    prompt: string,
+    systemPrompt = '',
+    maxTokens = 200,
+    onChunk: StreamCallback
+): Promise<string> {
+    const key = apiKeys['groq'];
+    if (!key) throw new Error('Groq API key not set for streaming');
+
+    const messages: ChatMessage[] = [];
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    messages.push({ role: 'user', content: prompt });
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: providers.find(p => p.name === 'groq')?.model || 'llama3-8b-8192',
+            messages,
+            max_tokens: maxTokens,
+            temperature: 0.7,
+            stream: true,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Groq streaming error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
+
+        for (const line of lines) {
+            const data = line.replace('data: ', '').trim();
+            if (data === '[DONE]') continue;
+
+            try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content || '';
+                if (content) {
+                    fullResponse += content;
+                    onChunk(content, false);
+                }
+            } catch {
+                // Skip invalid JSON chunks
+            }
+        }
+    }
+
+    onChunk('', true);
+    return fullResponse;
+}
+

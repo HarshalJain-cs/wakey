@@ -23,6 +23,7 @@ export default function GoalsWidget() {
     }, []);
 
     const loadProgress = async () => {
+        if (!window.wakey) return;
         try {
             const stats = await window.wakey.getTodayStats();
             const tasks = await window.wakey.getTasks() as { status: string }[];

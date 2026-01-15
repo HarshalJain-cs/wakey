@@ -39,6 +39,10 @@ export default function TodayStatsWidget() {
 
     useEffect(() => {
         const loadStats = async () => {
+            if (!window.wakey) {
+                setLoading(false);
+                return;
+            }
             try {
                 const data = await window.wakey.getTodayStats();
                 setStats(data);

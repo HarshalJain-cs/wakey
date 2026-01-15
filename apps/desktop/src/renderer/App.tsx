@@ -36,6 +36,14 @@ export default function App() {
     const commandPalette = useCommandPalette();
 
     useEffect(() => {
+        // Check if wakey API is available
+        if (!window.wakey) {
+            console.warn('Wakey API not available - preload script may not have loaded');
+            setAuthLoading(false);
+            setIsAuthenticated(true);
+            return;
+        }
+
         // Initialize authentication
         const initAuth = async () => {
             try {
@@ -66,6 +74,7 @@ export default function App() {
             setIsAuthenticated(!!state.user);
         });
 
+        // Setup wakey event listeners (only if wakey is available)
         window.wakey.onTrackingToggle((status) => setIsTracking(status));
         window.wakey.onFocusStart(() => navigate('/focus'));
         window.wakey.onNavigate((route) => navigate(route));
@@ -74,15 +83,17 @@ export default function App() {
             setDarkMode(settings.darkMode as boolean ?? true);
             if (!settings.onboardingComplete) setShowOnboarding(true);
         });
+
         return () => {
             unsubscribe();
-            window.wakey.removeAllListeners('tracking-toggle');
-            window.wakey.removeAllListeners('focus-start');
-            window.wakey.removeAllListeners('navigate');
+            window.wakey?.removeAllListeners('tracking-toggle');
+            window.wakey?.removeAllListeners('focus-start');
+            window.wakey?.removeAllListeners('navigate');
         };
     }, [navigate]);
 
     const toggleTracking = async () => {
+        if (!window.wakey) return;
         const newStatus = await window.wakey.setTrackingStatus(!isTracking);
         setIsTracking(newStatus);
     };
@@ -90,7 +101,7 @@ export default function App() {
     const toggleDarkMode = async () => {
         const newMode = !darkMode;
         setDarkMode(newMode);
-        await window.wakey.setSetting('darkMode', newMode);
+        await window.wakey?.setSetting('darkMode', newMode);
         document.documentElement.classList.toggle('dark', newMode);
     };
 
@@ -145,7 +156,7 @@ export default function App() {
                     </Routes>
                 </main>
             </div>
-            {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
+            {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
             {alert && <DistractionAlert app={alert.app} title={alert.title} onDismiss={dismiss} onBlock={block} />}
             <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
         </div>

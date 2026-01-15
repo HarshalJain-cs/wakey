@@ -94,12 +94,14 @@ export function useDistractionAlert() {
     const [alert, setAlert] = useState<{ app: string; title: string } | null>(null);
 
     useEffect(() => {
+        if (!window.wakey) return;
+
         window.wakey.onDistractionDetected((data) => {
             setAlert(data);
         });
 
         return () => {
-            window.wakey.removeAllListeners('distraction-detected');
+            window.wakey?.removeAllListeners('distraction-detected');
         };
     }, []);
 

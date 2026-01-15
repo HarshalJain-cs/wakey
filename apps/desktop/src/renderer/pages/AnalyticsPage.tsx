@@ -30,6 +30,7 @@ export default function AnalyticsPage() {
     }, [period]);
 
     const loadStats = async () => {
+        if (!window.wakey) return;
         try {
             const data = await window.wakey.getTodayStats();
             setStats(data);

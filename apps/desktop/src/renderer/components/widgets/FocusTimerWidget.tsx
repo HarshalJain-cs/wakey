@@ -36,10 +36,9 @@ export default function FocusTimerWidget() {
 
     const startTimer = useCallback(async () => {
         // Start session in database
-        const sessionId = await window.wakey.startFocusSession(
-            timer.mode,
-            Math.floor(timer.timeRemaining / 60)
-        );
+        const sessionId = window.wakey
+            ? await window.wakey.startFocusSession(timer.mode, Math.floor(timer.timeRemaining / 60))
+            : Date.now();
 
         setTimer(prev => ({
             ...prev,
@@ -95,7 +94,7 @@ export default function FocusTimerWidget() {
         } else if (timer.timeRemaining === 0 && timer.sessionId) {
             // Session complete
             const quality = Math.max(0, 100 - timer.distractionCount * 10);
-            window.wakey.endFocusSession(timer.sessionId, quality, timer.distractionCount);
+            window.wakey?.endFocusSession(timer.sessionId, quality, timer.distractionCount);
 
             // Switch mode
             setTimer(prev => ({
@@ -117,6 +116,8 @@ export default function FocusTimerWidget() {
 
     // Listen for distractions
     useEffect(() => {
+        if (!window.wakey) return;
+
         window.wakey.onDistractionDetected(() => {
             if (timer.isRunning) {
                 setTimer(prev => ({
@@ -134,8 +135,8 @@ export default function FocusTimerWidget() {
         });
 
         return () => {
-            window.wakey.removeAllListeners('distraction-detected');
-            window.wakey.removeAllListeners('focus-start');
+            window.wakey?.removeAllListeners('distraction-detected');
+            window.wakey?.removeAllListeners('focus-start');
         };
     }, [timer.isRunning, startTimer]);
 

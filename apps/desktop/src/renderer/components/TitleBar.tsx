@@ -5,9 +5,9 @@ interface TitleBarProps {
 }
 
 export default function TitleBar({ darkMode }: TitleBarProps) {
-    const handleMinimize = () => window.wakey.minimize();
-    const handleMaximize = () => window.wakey.maximize();
-    const handleClose = () => window.wakey.close();
+    const handleMinimize = () => window.wakey?.minimize();
+    const handleMaximize = () => window.wakey?.maximize();
+    const handleClose = () => window.wakey?.close();
 
     return (
         <div className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800">

@@ -43,6 +43,7 @@ export default function DeveloperDashboard() {
     }, []);
 
     const loadStats = async () => {
+        if (!window.wakey) return;
         try {
             const stats = await window.wakey.getTodayStats();
             setTodayMinutes(stats.focusTime);

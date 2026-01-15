@@ -1,18 +1,56 @@
-// AI Service using Groq API (free, fast inference)
-// Fallback to Ollama for offline use
+/**
+ * @fileoverview AI Service for Wakey Productivity Platform
+ * 
+ * This module provides AI-powered features using multiple providers:
+ * - **Primary**: Groq API (free, fast inference with Llama models)
+ * - **Fallback**: Ollama (local, offline-capable)
+ * 
+ * @module services/ai
+ * @author Wakey Team
+ * 
+ * @example
+ * // Generate productivity insights
+ * import { generateProductivityInsights, setGroqApiKey } from './ai';
+ * 
+ * setGroqApiKey('your-api-key');
+ * const insights = await generateProductivityInsights({
+ *   focusMinutes: 120,
+ *   distractionCount: 3,
+ *   topApps: [{ app: 'VSCode', minutes: 90 }],
+ *   sessionsCompleted: 4
+ * });
+ */
 
+/** Groq API endpoint for chat completions */
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+/** Ollama local API endpoint for text generation */
 const OLLAMA_API_URL = 'http://localhost:11434/api/generate';
 
-// Get API key from settings or environment
+/** Stored API key for Groq authentication */
 let groqApiKey: string | null = null;
 
+/**
+ * Sets the Groq API key for authentication.
+ * Must be called before using any AI-powered features.
+ * 
+ * @param key - The Groq API key (obtain from https://console.groq.com)
+ * 
+ * @example
+ * setGroqApiKey('gsk_xxxxxxxxxxxx');
+ */
 export function setGroqApiKey(key: string): void {
     groqApiKey = key;
 }
 
+/**
+ * Represents a message in the chat completion format.
+ * Compatible with OpenAI-style chat APIs.
+ */
 interface ChatMessage {
+    /** The role of the message sender */
     role: 'system' | 'user' | 'assistant';
+    /** The content of the message */
     content: string;
 }
 
@@ -66,13 +104,37 @@ async function callOllama(prompt: string): Promise<string> {
     }
 }
 
-// AI Productivity Insights
-export async function generateProductivityInsights(data: {
+/**
+ * Productivity data input for AI insights generation.
+ */
+interface ProductivityData {
+    /** Total focused minutes tracked today */
     focusMinutes: number;
+    /** Number of distraction events detected */
     distractionCount: number;
+    /** Top apps by usage time */
     topApps: { app: string; minutes: number }[];
+    /** Number of completed focus sessions */
     sessionsCompleted: number;
-}): Promise<string[]> {
+}
+
+/**
+ * Generates AI-powered productivity insights based on user activity data.
+ * Uses Groq API with fallback to rule-based insights if API fails.
+ * 
+ * @param data - User's productivity metrics for the day
+ * @returns Array of 3 actionable insight strings
+ * 
+ * @example
+ * const insights = await generateProductivityInsights({
+ *   focusMinutes: 120,
+ *   distractionCount: 5,
+ *   topApps: [{ app: 'VSCode', minutes: 90 }],
+ *   sessionsCompleted: 3
+ * });
+ * // Returns: ['Consider longer focus sessions...', 'Great coding progress...', ...]
+ */
+export async function generateProductivityInsights(data: ProductivityData): Promise<string[]> {
     const prompt = `Based on this productivity data, give 3 short, actionable insights (one sentence each):
 - Focus time today: ${data.focusMinutes} minutes
 - Distractions: ${data.distractionCount}
@@ -117,7 +179,18 @@ Format: Return only 3 bullet points, no intro.`;
     }
 }
 
-// AI App Categorization
+/**
+ * Categorizes an application using AI with rule-based fallback.
+ * First attempts fast rule-based matching, then falls back to AI.
+ * 
+ * @param appName - The name of the application
+ * @param windowTitle - The current window title
+ * @returns Category string (Development, Communication, etc.)
+ * 
+ * @example
+ * const category = await categorizeAppWithAI('Visual Studio Code', 'app.tsx');
+ * // Returns: 'Development'
+ */
 export async function categorizeAppWithAI(appName: string, windowTitle: string): Promise<string> {
     // First try rule-based (faster)
     const ruleCategory = getRuleBasedCategory(appName);
@@ -164,7 +237,17 @@ function getRuleBasedCategory(appName: string): string | null {
     return null;
 }
 
-// AI Task Suggestions
+/**
+ * Generates a suggested description for a task based on its title.
+ * Uses AI to provide context-aware task descriptions.
+ * 
+ * @param title - The task title to generate a description for
+ * @returns Suggested 1-2 sentence description, or empty string on failure
+ * 
+ * @example
+ * const desc = await suggestTaskDescription('Fix login bug');
+ * // Returns: 'Investigate and resolve issues with the user login flow.'
+ */
 export async function suggestTaskDescription(title: string): Promise<string> {
     try {
         const messages: ChatMessage[] = [
@@ -178,44 +261,86 @@ export async function suggestTaskDescription(title: string): Promise<string> {
     }
 }
 
-// Distraction Detection (enhanced)
+/** List of apps commonly considered distractions */
 const DISTRACTION_APPS = [
     'youtube', 'netflix', 'tiktok', 'instagram', 'twitter', 'reddit',
     'facebook', 'steam', 'twitch', 'discord', 'hulu', 'disney+',
     'prime video', 'snapchat', 'whatsapp', 'telegram',
 ];
 
+/** List of apps considered work/productive */
 const WORK_APPS = [
     'code', 'visual studio', 'terminal', 'notion', 'obsidian',
     'word', 'excel', 'slack', 'teams', 'zoom', 'figma',
 ];
 
+/**
+ * Checks if an application is classified as a distraction.
+ * 
+ * @param appName - Name of the application to check
+ * @returns true if the app is a known distraction
+ */
 export function isDistractionApp(appName: string): boolean {
     const lower = appName.toLowerCase();
     return DISTRACTION_APPS.some(d => lower.includes(d));
 }
 
+/**
+ * Checks if an application is classified as work-related.
+ * 
+ * @param appName - Name of the application to check
+ * @returns true if the app is a known work app
+ */
 export function isWorkApp(appName: string): boolean {
     const lower = appName.toLowerCase();
     return WORK_APPS.some(w => lower.includes(w));
 }
 
-// Focus Score Calculation
-export function calculateFocusScore(data: {
+/**
+ * Input parameters for focus score calculation.
+ */
+interface FocusScoreInput {
+    /** Total minutes of focused work */
     focusMinutes: number;
+    /** Number of distractions during session */
     distractionCount: number;
+    /** Number of app/context switches */
     contextSwitches: number;
+    /** Target minutes for the session */
     sessionGoalMinutes: number;
-}): number {
+}
+
+/**
+ * Calculates a focus quality score (0-100) based on session metrics.
+ * 
+ * Scoring formula:
+ * - Base score: 100
+ * - Deduction: -5 points per distraction
+ * - Deduction: -2 points per context switch
+ * - Bonus: +10 points if goal minutes achieved
+ * 
+ * @param data - Focus session metrics
+ * @returns Score from 0 (poor) to 100 (excellent)
+ * 
+ * @example
+ * const score = calculateFocusScore({
+ *   focusMinutes: 25,
+ *   distractionCount: 2,
+ *   contextSwitches: 3,
+ *   sessionGoalMinutes: 25
+ * });
+ * // Returns: 94 (100 - 10 - 6 + 10)
+ */
+export function calculateFocusScore(data: FocusScoreInput): number {
     let score = 100;
 
-    // Deduct for distractions
+    // Deduct for distractions (-5 each)
     score -= data.distractionCount * 5;
 
-    // Deduct for context switches
+    // Deduct for context switches (-2 each)
     score -= data.contextSwitches * 2;
 
-    // Bonus for meeting focus goal
+    // Bonus for meeting focus goal (+10)
     if (data.focusMinutes >= data.sessionGoalMinutes) {
         score += 10;
     }
@@ -223,14 +348,39 @@ export function calculateFocusScore(data: {
     return Math.max(0, Math.min(100, score));
 }
 
-// Daily Summary Generation
-export async function generateDailySummary(data: {
+/**
+ * Input for daily summary generation.
+ */
+interface DailySummaryData {
+    /** Total focused minutes */
     focusMinutes: number;
+    /** Total distractions */
     distractionCount: number;
+    /** Top apps by usage */
     topApps: { app: string; minutes: number }[];
+    /** Tasks completed today */
     tasksCompleted: number;
+    /** Focus sessions completed */
     sessionsCompleted: number;
-}): Promise<string> {
+}
+
+/**
+ * Generates an AI-powered daily productivity summary.
+ * Provides encouraging feedback and highlights key achievements.
+ * 
+ * @param data - Daily productivity metrics
+ * @returns 2-3 sentence summary of the day's productivity
+ * 
+ * @example
+ * const summary = await generateDailySummary({
+ *   focusMinutes: 240,
+ *   distractionCount: 5,
+ *   topApps: [{ app: 'VSCode', minutes: 180 }],
+ *   tasksCompleted: 8,
+ *   sessionsCompleted: 6
+ * });
+ */
+export async function generateDailySummary(data: DailySummaryData): Promise<string> {
     const hours = Math.floor(data.focusMinutes / 60);
     const mins = data.focusMinutes % 60;
 

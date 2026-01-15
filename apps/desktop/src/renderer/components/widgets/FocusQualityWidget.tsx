@@ -12,6 +12,7 @@ export default function FocusQualityWidget({ score: propScore }: FocusQualityWid
         // If score not provided as prop, calculate from today's stats
         if (propScore === undefined) {
             const loadStats = async () => {
+                if (!window.wakey) return;
                 try {
                     const todayStats = await window.wakey.getTodayStats();
                     // Calculate quality score based on focus time and distractions

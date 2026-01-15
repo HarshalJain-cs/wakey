@@ -25,6 +25,10 @@ export default function TaskListWidget() {
     }, []);
 
     const loadTasks = async () => {
+        if (!window.wakey) {
+            setLoading(false);
+            return;
+        }
         try {
             const data = await window.wakey.getTasks();
             setTasks(data as Task[]);
@@ -36,7 +40,7 @@ export default function TaskListWidget() {
     };
 
     const addTask = async () => {
-        if (!newTask.trim()) return;
+        if (!newTask.trim() || !window.wakey) return;
 
         try {
             await window.wakey.createTask(newTask, 'medium');
@@ -49,6 +53,7 @@ export default function TaskListWidget() {
     };
 
     const toggleTask = async (task: Task) => {
+        if (!window.wakey) return;
         const newStatus = task.status === 'done' ? 'todo' : 'done';
         try {
             await window.wakey.updateTaskStatus(task.id, newStatus);
@@ -59,6 +64,7 @@ export default function TaskListWidget() {
     };
 
     const removeTask = async (id: number) => {
+        if (!window.wakey) return;
         try {
             await window.wakey.deleteTask(id);
             loadTasks();

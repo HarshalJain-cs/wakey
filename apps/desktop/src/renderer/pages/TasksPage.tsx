@@ -29,6 +29,10 @@ export default function TasksPage() {
     }, []);
 
     const loadTasks = async () => {
+        if (!window.wakey) {
+            setLoading(false);
+            return;
+        }
         try {
             const data = await window.wakey.getTasks();
             setTasks(data as Task[]);
@@ -40,7 +44,7 @@ export default function TasksPage() {
     };
 
     const addTask = async () => {
-        if (!newTask.trim()) return;
+        if (!newTask.trim() || !window.wakey) return;
 
         try {
             await window.wakey.createTask(newTask, newPriority);
@@ -53,6 +57,7 @@ export default function TasksPage() {
     };
 
     const toggleTask = async (task: Task) => {
+        if (!window.wakey) return;
         const newStatus = task.status === 'done' ? 'todo' : 'done';
         try {
             await window.wakey.updateTaskStatus(task.id, newStatus);
@@ -63,6 +68,7 @@ export default function TasksPage() {
     };
 
     const removeTask = async (id: number) => {
+        if (!window.wakey) return;
         try {
             await window.wakey.deleteTask(id);
             loadTasks();
@@ -94,8 +100,8 @@ export default function TasksPage() {
                             key={f}
                             onClick={() => setFilter(f)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-dark-800 text-dark-400 hover:text-white'
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-dark-800 text-dark-400 hover:text-white'
                                 }`}
                         >
                             {f === 'all' ? `All (${tasks.length})` : f === 'todo' ? `To Do (${todoCount})` : `Done (${completedCount})`}

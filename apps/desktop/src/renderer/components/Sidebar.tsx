@@ -50,7 +50,10 @@ export default function Sidebar({ isTracking, onTrackingToggle }: SidebarProps) 
     const [currentActivity, setCurrentActivity] = useState<{ app: string; category: string } | null>(null);
 
     useEffect(() => {
+        if (!window.wakey) return;
+
         const loadStats = async () => {
+            if (!window.wakey) return;
             try {
                 const data = await window.wakey.getTodayStats();
                 setStats({ focusTime: data.focusTime, sessions: data.sessions });
@@ -69,7 +72,7 @@ export default function Sidebar({ isTracking, onTrackingToggle }: SidebarProps) 
 
         return () => {
             clearInterval(interval);
-            window.wakey.removeAllListeners('activity-update');
+            window.wakey?.removeAllListeners('activity-update');
         };
     }, []);
 

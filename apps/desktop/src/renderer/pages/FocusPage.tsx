@@ -35,6 +35,7 @@ export default function FocusPage() {
     }, []);
 
     const loadStats = async () => {
+        if (!window.wakey) return;
         try {
             const stats = await window.wakey.getTodayStats();
             setSessionsToday(stats.sessions);
@@ -51,6 +52,10 @@ export default function FocusPage() {
     };
 
     const startTimer = useCallback(async () => {
+        if (!window.wakey) {
+            setTimer(prev => ({ ...prev, isRunning: true, distractionCount: 0 }));
+            return;
+        }
         const sessionId = await window.wakey.startFocusSession(
             timer.mode,
             Math.floor(timer.timeRemaining / 60)
@@ -105,7 +110,9 @@ export default function FocusPage() {
         } else if (timer.timeRemaining === 0 && timer.sessionId) {
             // Session complete
             const quality = Math.max(0, 100 - timer.distractionCount * 10);
-            window.wakey.endFocusSession(timer.sessionId, quality, timer.distractionCount);
+            if (window.wakey) {
+                window.wakey.endFocusSession(timer.sessionId, quality, timer.distractionCount);
+            }
 
             if (soundEnabled) {
                 // Play notification sound
@@ -132,6 +139,8 @@ export default function FocusPage() {
 
     // Listen for distractions
     useEffect(() => {
+        if (!window.wakey) return;
+
         window.wakey.onDistractionDetected(() => {
             if (timer.isRunning && timer.mode === 'focus') {
                 setTimer(prev => ({
@@ -142,7 +151,9 @@ export default function FocusPage() {
         });
 
         return () => {
-            window.wakey.removeAllListeners('distraction-detected');
+            if (window.wakey) {
+                window.wakey.removeAllListeners('distraction-detected');
+            }
         };
     }, [timer.isRunning, timer.mode]);
 
@@ -202,8 +213,8 @@ export default function FocusPage() {
                 <button
                     onClick={timer.isRunning ? pauseTimer : startTimer}
                     className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${timer.isRunning
-                            ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
-                            : 'bg-primary-500 text-white hover:bg-primary-600'
+                        ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
+                        : 'bg-primary-500 text-white hover:bg-primary-600'
                         }`}
                 >
                     {timer.isRunning ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
@@ -232,8 +243,8 @@ export default function FocusPage() {
                         onClick={() => selectPreset(i)}
                         disabled={timer.isRunning}
                         className={`px-6 py-3 rounded-xl transition-all ${selectedPreset === i
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-dark-800 text-dark-400 hover:bg-dark-700 disabled:opacity-50'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-dark-800 text-dark-400 hover:bg-dark-700 disabled:opacity-50'
                             }`}
                     >
                         <div className="font-medium">{p.label}</div>
@@ -252,8 +263,8 @@ export default function FocusPage() {
                     }))}
                     disabled={timer.isRunning}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${timer.mode === 'focus'
-                            ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                            : 'bg-dark-800 text-dark-400'
+                        ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                        : 'bg-dark-800 text-dark-400'
                         }`}
                 >
                     <Target className="w-4 h-4" />
@@ -267,8 +278,8 @@ export default function FocusPage() {
                     }))}
                     disabled={timer.isRunning}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${timer.mode === 'break'
-                            ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                            : 'bg-dark-800 text-dark-400'
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                        : 'bg-dark-800 text-dark-400'
                         }`}
                 >
                     <Coffee className="w-4 h-4" />

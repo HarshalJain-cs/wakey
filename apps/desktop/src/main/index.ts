@@ -1,35 +1,87 @@
+/**
+ * @fileoverview Wakey Desktop Application - Main Process
+ * 
+ * This is the Electron main process that handles:
+ * - Application lifecycle (startup, shutdown, single instance)
+ * - Activity tracking and categorization
+ * - Focus session management
+ * - Task management
+ * - IPC communication with renderer process
+ * - System tray integration
+ * - Global keyboard shortcuts
+ * 
+ * @module main/index
+ * @author Wakey Team
+ * 
+ * @see {@link https://www.electronjs.org/docs/latest/tutorial/process-model Electron Process Model}
+ */
+
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { fileURLToPath } from 'url';
 import Store from 'electron-store';
 
-// Data store for persistence (no native modules needed)
+// ============================================
+// Type Definitions
+// ============================================
+
+/**
+ * Represents a tracked activity/app usage entry.
+ * Stored locally with duration tracking.
+ */
 interface Activity {
+    /** Unique identifier for the activity */
     id: number;
+    /** Name of the application */
     app_name: string;
+    /** Title of the active window */
     window_title: string;
+    /** Categorized type (Development, Communication, etc.) */
     category: string;
+    /** Whether this app is flagged as a distraction */
     is_distraction: boolean;
+    /** Total time spent in seconds */
     duration_seconds: number;
+    /** ISO timestamp when activity was first recorded */
     created_at: string;
 }
 
+/**
+ * Represents a focus/break session with quality metrics.
+ */
 interface FocusSession {
+    /** Unique session identifier */
     id: number;
+    /** Session type: focus work or break */
     type: 'focus' | 'break';
+    /** Planned duration in minutes */
     duration_minutes: number;
+    /** Quality score (0-100) calculated at session end */
     quality_score: number;
+    /** Number of distractions during session */
     distractions_count: number;
+    /** ISO timestamp when session started */
     started_at: string;
+    /** ISO timestamp when session ended (undefined if in progress) */
     ended_at?: string;
 }
 
+/**
+ * Represents a user task with priority and status tracking.
+ */
 interface Task {
+    /** Unique task identifier */
     id: number;
+    /** Task title/description */
     title: string;
+    /** Priority level for sorting */
     priority: 'high' | 'medium' | 'low';
+    /** Current workflow status */
     status: 'todo' | 'in_progress' | 'done';
+    /** ISO timestamp when task was created */
     created_at: string;
+    /** ISO timestamp when task was completed */
     completed_at?: string;
 }
 
@@ -150,7 +202,14 @@ let currentActivityId: number | null = null;
 let currentActivityStart: number | null = null;
 let lastAppName: string | null = null;
 
-// App categorization
+// ============================================
+// App Categorization & Distraction Detection
+// ============================================
+
+/**
+ * Rule-based category mapping for common applications.
+ * Maps lowercase keyword to category name.
+ */
 const CATEGORY_RULES: Record<string, string> = {
     'code': 'Development', 'visual studio': 'Development', 'terminal': 'Development',
     'powershell': 'Development', 'git': 'Development', 'postman': 'Development',
@@ -164,6 +223,12 @@ const CATEGORY_RULES: Record<string, string> = {
     'wakey': 'Productivity',
 };
 
+/**
+ * Categorizes an application based on rule-based keyword matching.
+ * 
+ * @param appName - The name of the application to categorize
+ * @returns Category string (e.g., 'Development', 'Entertainment') or 'Other' if unknown
+ */
 function categorizeApp(appName: string): string {
     const lower = appName.toLowerCase();
     for (const [key, category] of Object.entries(CATEGORY_RULES)) {
@@ -172,6 +237,13 @@ function categorizeApp(appName: string): string {
     return 'Other';
 }
 
+/**
+ * Checks if an application is considered a distraction.
+ * Combines default distraction list with user-configured custom list.
+ * 
+ * @param appName - The name of the application to check
+ * @returns true if the app is flagged as a distraction
+ */
 function isDistraction(appName: string): boolean {
     const defaultDistractions = ['youtube', 'netflix', 'tiktok', 'instagram', 'twitter', 'reddit', 'facebook', 'steam', 'twitch', 'discord', 'telegram', 'whatsapp'];
     const customDistractions = store.get('settings.customDistractions', []) as string[];
@@ -180,11 +252,26 @@ function isDistraction(appName: string): boolean {
     return allDistractions.some(d => lower.includes(d));
 }
 
+/**
+ * Gets today's date as an ISO date string (YYYY-MM-DD).
+ * Used for filtering activities and sessions by day.
+ */
 function getToday(): string {
     return new Date().toISOString().split('T')[0];
 }
 
-// Activity logging
+// ============================================
+// Activity Tracking
+// ============================================
+
+/**
+ * Logs an activity entry for the given app and window.
+ * Updates duration if the same app is still active, otherwise creates new entry.
+ * Sends distraction alerts to renderer if a distraction app is detected.
+ * 
+ * @param appName - The name of the active application
+ * @param windowTitle - The title of the active window
+ */
 function logActivity(appName: string, windowTitle: string): void {
     const activities = store.get('activities', []);
     const nextIds = store.get('nextIds');
