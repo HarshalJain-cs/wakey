@@ -7,7 +7,22 @@
       "Bash(npx electron-builder --win --x64)",
       "Bash(CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder:*)",
       "Bash(ls:*)",
-      "Bash(npx electron-builder --win portable --x64)"
+      "Bash(npx electron-builder --win portable --x64)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(pnpm --filter @wakey/desktop build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run package:win:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"rd /s /q \"\"C:\\\\Users\\\\Admin\\\\Desktop\\\\dev\\\\wakey\\\\wakey\\\\node_modules\\\\.pnpm\\\\electron@28.3.3\"\"\")",
+      "Bash(cmd /c \"rd /s /q node_modules\")",
+      "Bash(cmd /c \"rd /s /q apps\\\\desktop\\\\node_modules\")",
+      "Bash(cmd /c \"rd /s /q packages\\\\ai\\\\node_modules\")",
+      "Bash(pnpm store prune:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm desktop:*)",
+      "Bash(netstat:*)",
+      "Bash(xargs:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
