@@ -24,6 +24,8 @@ import AchievementsPage from './pages/AchievementsPage';
 import AuthPage from './pages/AuthPage';
 import GoalsPage from './pages/GoalsPage';
 import MusicPage from './pages/MusicPage';
+import ShortcutsPage from './pages/ShortcutsPage';
+import EyeBreakReminder from './components/EyeBreakReminder';
 import * as supabaseAuth from './services/supabase-auth';
 
 export default function App() {
@@ -156,6 +158,7 @@ export default function App() {
                         <Route path="/achievements" element={<AchievementsPage />} />
                         <Route path="/goals" element={<GoalsPage />} />
                         <Route path="/music" element={<MusicPage />} />
+                        <Route path="/shortcuts" element={<ShortcutsPage />} />
                         <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
                     </Routes>
                 </main>
@@ -163,6 +166,7 @@ export default function App() {
             {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
             {alert && <DistractionAlert app={alert.app} title={alert.title} onDismiss={dismiss} onBlock={block} />}
             <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
+            <EyeBreakReminder enabled={true} intervalMinutes={20} />
         </div>
     );
 }

@@ -55,11 +55,38 @@ export function isIdle(thresholdMs: number = 5 * 60 * 1000): boolean {
     return getIdleTime() > thresholdMs;
 }
 
-// Screenshot capture (placeholder - will use native module)
+// Screenshot capture using screenshot-desktop
 export async function captureScreenshot(savePath: string): Promise<boolean> {
-    // Will be implemented with screenshot-desktop or native module
-    console.log('Screenshot capture not yet implemented:', savePath);
-    return false;
+    try {
+        const screenshot = await import('screenshot-desktop');
+        const img = await screenshot.default({ format: 'png' });
+
+        // Write to file
+        const fs = await import('fs/promises');
+        const path = await import('path');
+
+        // Ensure directory exists
+        const dir = path.dirname(savePath);
+        await fs.mkdir(dir, { recursive: true });
+
+        await fs.writeFile(savePath, img);
+        console.log('Screenshot saved:', savePath);
+        return true;
+    } catch (error) {
+        console.error('Screenshot capture failed:', error);
+        return false;
+    }
+}
+
+// Capture screenshot with timestamp filename
+export async function captureTimestampedScreenshot(directory: string): Promise<string | null> {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `screenshot-${timestamp}.png`;
+    const path = await import('path');
+    const savePath = path.join(directory, filename);
+
+    const success = await captureScreenshot(savePath);
+    return success ? savePath : null;
 }
 
 // Activity change detection

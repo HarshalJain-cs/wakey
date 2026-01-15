@@ -20,7 +20,8 @@ import {
     Cloud,
     Trophy,
     Target,
-    Music
+    Music,
+    Keyboard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ const navItems = [
     { path: '/flashcards', icon: GraduationCap, label: 'Flashcards' },
     { path: '/achievements', icon: Trophy, label: 'Achievements' },
     { path: '/cloud-sync', icon: Cloud, label: 'Cloud Sync' },
+    { path: '/shortcuts', icon: Keyboard, label: 'Shortcuts' },
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
