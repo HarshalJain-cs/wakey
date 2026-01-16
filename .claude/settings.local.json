@@ -22,7 +22,9 @@
       "Bash(pnpm install:*)",
       "Bash(pnpm desktop:*)",
       "Bash(netstat:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx turbo build)"
     ]
   },
   "enableAllProjectMcpServers": true,
