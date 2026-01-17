@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, BarChart3, Brain, Clock, Zap, Calendar } from 'lucide-react';
-import { focusTrendsService, DailyStats } from '../services/focus-trends-service';
+import { focusTrendsService, DailyStats } from '../../services/focus-trends-service';
 
 interface FocusTrendsWidgetProps {
     className?: string;
@@ -136,7 +136,7 @@ export default function FocusTrendsWidget({ className = '' }: FocusTrendsWidgetP
                     <span>This week</span>
                 </div>
                 <div className="flex items-end gap-1 h-8">
-                    {trendData.map((day, i) => {
+                    {trendData.map((day) => {
                         const height = (day.focusMinutes / maxMinutes) * 100;
                         return (
                             <div

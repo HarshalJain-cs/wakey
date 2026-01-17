@@ -1,10 +1,10 @@
 import { Minus, Square, X } from 'lucide-react';
 
 interface TitleBarProps {
-    darkMode: boolean;
+    darkMode?: boolean;
 }
 
-export default function TitleBar({ darkMode }: TitleBarProps) {
+export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
     const handleMinimize = () => window.wakey?.minimize();
     const handleMaximize = () => window.wakey?.maximize();
     const handleClose = () => window.wakey?.close();

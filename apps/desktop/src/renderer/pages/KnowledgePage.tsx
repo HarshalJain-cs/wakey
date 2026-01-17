@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     BookOpen, Plus, Search, Tag, Trash2, Edit, Save, X,
-    Network, FileText, Link2, RefreshCw, ChevronRight
+    Network, FileText, Link2, RefreshCw
 } from 'lucide-react';
 import {
     createNote,

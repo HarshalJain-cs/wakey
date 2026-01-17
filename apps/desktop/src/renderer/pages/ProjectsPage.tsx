@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
     Plus, FolderKanban, Clock, DollarSign,
-    MoreVertical, Edit2, Trash2, Play, Pause,
-    CheckCircle, Circle, Users
+    Trash2, Play, Pause, Users
 } from 'lucide-react';
 
 interface Project {
@@ -37,7 +36,6 @@ export default function ProjectsPage() {
         },
     ]);
     const [showModal, setShowModal] = useState(false);
-    const [editingProject, setEditingProject] = useState<Project | null>(null);
     const [activeTimer, setActiveTimer] = useState<number | null>(null);
     const [timerSeconds, setTimerSeconds] = useState(0);
 

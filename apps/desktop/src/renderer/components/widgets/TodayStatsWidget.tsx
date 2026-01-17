@@ -1,4 +1,4 @@
-import { Clock, CheckCircle, Activity, Zap, AlertTriangle } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface StatCardProps {

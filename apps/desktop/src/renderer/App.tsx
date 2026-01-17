@@ -25,6 +25,7 @@ import AuthPage from './pages/AuthPage';
 import GoalsPage from './pages/GoalsPage';
 import MusicPage from './pages/MusicPage';
 import ShortcutsPage from './pages/ShortcutsPage';
+import WorkflowsPage from './pages/WorkflowsPage';
 import EyeBreakReminder from './components/EyeBreakReminder';
 import * as supabaseAuth from './services/supabase-auth';
 
@@ -159,6 +160,7 @@ export default function App() {
                         <Route path="/goals" element={<GoalsPage />} />
                         <Route path="/music" element={<MusicPage />} />
                         <Route path="/shortcuts" element={<ShortcutsPage />} />
+                        <Route path="/workflows" element={<WorkflowsPage />} />
                         <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
                     </Routes>
                 </main>

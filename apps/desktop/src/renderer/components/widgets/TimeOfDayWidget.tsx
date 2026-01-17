@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Clock, Sun, Sunset, Moon, TrendingUp, Target } from 'lucide-react';
-import { timeOfDayService, HourlyStats } from '../services/time-of-day-service';
+import { Clock, Sun, Sunset, Moon, TrendingUp } from 'lucide-react';
+import { timeOfDayService, HourlyStats } from '../../services/time-of-day-service';
 
 interface TimeOfDayWidgetProps {
     className?: string;
@@ -22,15 +22,6 @@ export default function TimeOfDayWidget({ className = '' }: TimeOfDayWidgetProps
     }, []);
 
     const maxScore = Math.max(...hourlyStats.filter(h => h.sampleCount > 0).map(h => h.avgFocusScore), 100);
-
-    const getPeriodIcon = (period: string) => {
-        switch (period) {
-            case 'morning': return <Sun className="w-4 h-4 text-amber-400" />;
-            case 'afternoon': return <Sunset className="w-4 h-4 text-orange-400" />;
-            case 'evening': return <Moon className="w-4 h-4 text-purple-400" />;
-            default: return <Clock className="w-4 h-4 text-dark-400" />;
-        }
-    };
 
     return (
         <div className={`bg-dark-800 rounded-xl border border-dark-700 p-5 ${className}`}>

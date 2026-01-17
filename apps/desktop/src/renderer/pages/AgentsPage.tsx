@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Bot, Play, Pause, RefreshCw, Settings, Clock,
     Search, Code, TrendingUp, Lightbulb, Plus, X,
-    CheckCircle, XCircle, AlertCircle, ChevronRight
+    CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import {
     agentManager,
@@ -14,7 +14,6 @@ export default function AgentsPage() {
     const [agents, setAgents] = useState<ReturnType<typeof agentManager.getAllAgents>>([]);
     const [recentTasks, setRecentTasks] = useState<AgentTask[]>([]);
     const [selectedAgent, setSelectedAgent] = useState<AgentType | null>(null);
-    const [showConfig, setShowConfig] = useState(false);
     const [runningAgent, setRunningAgent] = useState<AgentType | null>(null);
 
     // Research agent state

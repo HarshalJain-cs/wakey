@@ -40,7 +40,7 @@ const GOOGLE_SCOPES = [
 class GoogleCalendarService {
     private config: CalendarConfig;
     private events: CalendarEvent[] = [];
-    private lastSync: Date | null = null;
+    private _lastSync: Date | null = null;
 
     constructor() {
         this.config = this.loadConfig();
@@ -121,7 +121,7 @@ class GoogleCalendarService {
         }
 
         try {
-            const timeMin = new Date().toISOString();
+            // timeMin/timeMax would be used with real Google Calendar API
             const timeMax = new Date();
             timeMax.setDate(timeMax.getDate() + daysAhead);
 
@@ -129,7 +129,7 @@ class GoogleCalendarService {
             // For demo purposes, return sample events
             const events = this.getDemoEvents();
             this.events = events;
-            this.lastSync = new Date();
+            this._lastSync = new Date();
 
             return events;
         } catch (error) {
@@ -247,6 +247,13 @@ class GoogleCalendarService {
             dueDate: new Date(event.start.getTime() - 30 * 60000), // 30 min before
             tags: ['meeting', 'calendar'],
         };
+    }
+
+    /**
+     * Get last sync time
+     */
+    getLastSync(): Date | null {
+        return this._lastSync;
     }
 
     /**

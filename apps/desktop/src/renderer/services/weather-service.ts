@@ -170,6 +170,13 @@ class WeatherService {
     }
 
     /**
+     * Get weather forecast
+     */
+    getForecast(): WeatherForecast[] {
+        return this.forecast;
+    }
+
+    /**
      * Get productivity tip based on weather
      */
     getProductivityTip(): string {

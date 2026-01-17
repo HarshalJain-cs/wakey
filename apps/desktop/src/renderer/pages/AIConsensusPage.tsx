@@ -9,7 +9,6 @@ import {
     enableProvider,
     setProviderApiKey,
     generateConsensus,
-    getModelStats,
     recordModelPerformance,
     AIProvider,
     ConsensusResult,

@@ -55,11 +55,17 @@ export function isIdle(thresholdMs: number = 5 * 60 * 1000): boolean {
     return getIdleTime() > thresholdMs;
 }
 
-// Screenshot capture using screenshot-desktop
+// Screenshot capture (optional feature - requires screenshot-desktop package)
 export async function captureScreenshot(savePath: string): Promise<boolean> {
     try {
-        const screenshot = await import('screenshot-desktop');
-        const img = await screenshot.default({ format: 'png' });
+        // Dynamic import - will fail gracefully if package not installed
+        const screenshotModule = await import('screenshot-desktop').catch(() => null);
+        if (!screenshotModule) {
+            console.warn('screenshot-desktop not installed, skipping screenshot capture');
+            return false;
+        }
+
+        const img = await screenshotModule.default({ format: 'png' });
 
         // Write to file
         const fs = await import('fs/promises');

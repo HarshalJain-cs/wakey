@@ -17,9 +17,8 @@
  */
 
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
-import { fileURLToPath } from 'url';
 import Store from 'electron-store';
 
 // ============================================
@@ -431,18 +430,19 @@ async function startTracking(): Promise<void> {
     console.log('Starting activity tracking...');
 
     // Dynamic import of active-win (ESM module)
-    let activeWin: typeof import('active-win') | null = null;
+    let getActiveWindow: (() => Promise<import('active-win').Result | undefined>) | null = null;
     try {
-        activeWin = await import('active-win');
+        const activeWinModule = await import('active-win');
+        getActiveWindow = activeWinModule.default;
     } catch (error) {
         console.warn('active-win not available, using fallback tracking');
     }
 
     trackingInterval = setInterval(async () => {
         try {
-            if (activeWin) {
+            if (getActiveWindow) {
                 // Use real active window detection
-                const window = await activeWin.default();
+                const window = await getActiveWindow();
                 if (window) {
                     const appName = window.owner?.name || window.title || 'Unknown';
                     const windowTitle = window.title || '';

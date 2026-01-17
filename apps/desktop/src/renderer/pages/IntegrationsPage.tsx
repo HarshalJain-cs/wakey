@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Plug, Calendar, Mail, Zap, CheckSquare, Key,
     Check, X, RefreshCw, ExternalLink, Copy, Eye, EyeOff,
-    Settings, Trash2, Plus, Send, Clock, AlertCircle
+    Trash2, Plus, Send, AlertCircle
 } from 'lucide-react';
 import {
     googleCalendarService,
@@ -17,8 +17,6 @@ import {
     ClickUpConfig,
     EmailConfig,
     ApiConfig,
-    ApiKey,
-    getAllIntegrations,
 } from '../services/integrations';
 
 export default function IntegrationsPage() {
@@ -199,8 +197,8 @@ export default function IntegrationsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${connected
-                                ? 'bg-green-500/20 text-green-400'
-                                : 'bg-dark-700 text-dark-400'
+                            ? 'bg-green-500/20 text-green-400'
+                            : 'bg-dark-700 text-dark-400'
                             }`}>
                             {connected ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                             {statusText}
@@ -732,6 +730,121 @@ export default function IntegrationsPage() {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </IntegrationCard>
+            </div>
+
+            {/* New Integrations */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Plug className="w-5 h-5 text-primary-400" />
+                    Knowledge & Communication
+                </h2>
+
+                {/* Notion */}
+                <IntegrationCard
+                    id="notion"
+                    icon={CheckSquare}
+                    title="Notion"
+                    description="Sync tasks and notes with Notion databases"
+                    connected={false}
+                    statusText="Not Connected"
+                    iconColor="bg-gradient-to-br from-gray-700 to-gray-900"
+                >
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-sm text-dark-400 block mb-2">Notion API Key</label>
+                                <input
+                                    type="password"
+                                    placeholder="secret_..."
+                                    className="input-field w-full"
+                                />
+                                <p className="text-xs text-dark-500 mt-1">
+                                    Get your integration token from notion.so/my-integrations
+                                </p>
+                            </div>
+                            <button
+                                className="w-full btn-primary flex items-center justify-center gap-2"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                Connect Notion
+                            </button>
+                        </div>
+                    </div>
+                </IntegrationCard>
+
+                {/* Slack */}
+                <IntegrationCard
+                    id="slack"
+                    icon={Zap}
+                    title="Slack"
+                    description="Update status and receive notifications"
+                    connected={false}
+                    statusText="Not Connected"
+                    iconColor="bg-gradient-to-br from-purple-600 to-pink-600"
+                >
+                    <div className="space-y-4 pt-4">
+                        <button
+                            className="w-full btn-primary flex items-center justify-center gap-2"
+                        >
+                            <ExternalLink className="w-4 h-4" />
+                            Connect Slack Workspace
+                        </button>
+                        <p className="text-xs text-dark-500 text-center">
+                            Auto-update your Slack status during focus sessions
+                        </p>
+                    </div>
+                </IntegrationCard>
+            </div>
+
+            {/* JARVIS Integration */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-cyan-400" />
+                    JARVIS AI Integration
+                </h2>
+
+                <IntegrationCard
+                    id="jarvis"
+                    icon={Zap}
+                    title="JARVIS Bridge"
+                    description="Connect to JARVIS master AI system"
+                    connected={false}
+                    statusText="Disconnected"
+                    iconColor="bg-gradient-to-br from-cyan-500 to-blue-600"
+                >
+                    <div className="space-y-4 pt-4">
+                        <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                            <p className="text-sm text-cyan-300">
+                                🤖 Connect Wakey to your JARVIS AI assistant for voice commands,
+                                cross-app automation, and intelligent insights.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                <span className="text-sm text-white">Share Activity Data</span>
+                                <button className="w-10 h-5 rounded-full bg-dark-600">
+                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                <span className="text-sm text-white">Enable Voice Commands</span>
+                                <button className="w-10 h-5 rounded-full bg-dark-600">
+                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                <span className="text-sm text-white">Receive JARVIS Commands</span>
+                                <button className="w-10 h-5 rounded-full bg-dark-600">
+                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                </button>
+                            </div>
+                        </div>
+                        <button className="w-full btn-primary flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600">
+                            <Zap className="w-4 h-4" />
+                            Connect to JARVIS
+                        </button>
                     </div>
                 </IntegrationCard>
             </div>

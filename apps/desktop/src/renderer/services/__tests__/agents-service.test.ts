@@ -7,11 +7,8 @@
  * - Task queue management
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-    agentManager,
-    AgentType,
-} from '../agents-service';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { agentManager } from '../agents-service';
 
 describe('Agents Service', () => {
     beforeEach(() => {

@@ -4,7 +4,7 @@ import {
     Key, Save, Trash2, FolderOpen, Database,
     Keyboard, Info, Shield, Zap, AlertTriangle, Plus, X,
     Cloud, LogOut, User, Check, Coffee, Palette, Target,
-    Calendar, Lock, BarChart3, Volume2
+    Calendar, Lock, BarChart3, Volume2, Mic, Bot
 } from 'lucide-react';
 import * as supabaseAuth from '../services/supabase-auth';
 
@@ -41,6 +41,8 @@ const SETTINGS_SECTIONS = [
     { id: 'sounds', label: 'Sounds', icon: Volume2 },
     { id: 'calendar', label: 'Calendars', icon: Calendar },
     { id: 'ai', label: 'AI Configuration', icon: Key },
+    { id: 'jarvis', label: 'JARVIS Integration', icon: Bot },
+    { id: 'voice', label: 'Voice Commands', icon: Mic },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'privacy', label: 'Privacy', icon: Lock },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
@@ -193,8 +195,8 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                             key={id}
                             onClick={() => setActiveSection(id)}
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${activeSection === id
-                                    ? 'bg-primary-500/10 text-primary-400'
-                                    : 'text-dark-400 hover:text-white hover:bg-dark-800'
+                                ? 'bg-primary-500/10 text-primary-400'
+                                : 'text-dark-400 hover:text-white hover:bg-dark-800'
                                 }`}
                         >
                             <Icon className="w-4 h-4" />
@@ -544,6 +546,121 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                                     Get your free API key from <a href="https://console.groq.com" target="_blank" className="text-primary-400 hover:underline">console.groq.com</a>
                                 </p>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* JARVIS Section */}
+                {activeSection === 'jarvis' && (
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Bot className="w-5 h-5 text-cyan-400" />
+                            JARVIS Integration
+                        </h2>
+
+                        <div className="p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl border border-cyan-500/30">
+                            <div className="flex items-center gap-3 mb-3">
+                                <Bot className="w-6 h-6 text-cyan-400" />
+                                <span className="font-medium text-white">Connect to JARVIS Master AI</span>
+                            </div>
+                            <p className="text-dark-400 text-sm mb-4">
+                                Link Wakey to your JARVIS AI assistant for voice commands, cross-app automation, and intelligent insights.
+                            </p>
+                        </div>
+
+                        <SettingToggle
+                            icon={Zap}
+                            label="Share Activity Data"
+                            description="Send productivity data to JARVIS for analysis"
+                            value={true}
+                            onChange={() => { }}
+                        />
+
+                        <SettingToggle
+                            icon={Zap}
+                            label="Share Focus Data"
+                            description="Send focus session data to JARVIS"
+                            value={true}
+                            onChange={() => { }}
+                        />
+
+                        <SettingToggle
+                            icon={Zap}
+                            label="Receive JARVIS Commands"
+                            description="Allow JARVIS to control Wakey remotely"
+                            value={true}
+                            onChange={() => { }}
+                        />
+
+                        <div className="p-4 bg-dark-800 rounded-xl border border-dark-700 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <Database className="w-5 h-5 text-primary-400" />
+                                <span className="font-medium text-white">JARVIS Supabase Connection</span>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-dark-300 mb-2">JARVIS Project URL</label>
+                                <input
+                                    type="text"
+                                    placeholder="https://your-jarvis-project.supabase.co"
+                                    className="input-field w-full"
+                                />
+                            </div>
+                            <button className="w-full btn-primary bg-gradient-to-r from-cyan-500 to-blue-600">
+                                Connect to JARVIS
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Voice Commands Section */}
+                {activeSection === 'voice' && (
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <Mic className="w-5 h-5 text-primary-400" />
+                            Voice Commands
+                        </h2>
+
+                        <SettingToggle
+                            icon={Mic}
+                            label="Enable Voice Commands"
+                            description="Use voice to control Wakey"
+                            value={true}
+                            onChange={() => { }}
+                        />
+
+                        <div className="p-4 bg-dark-800 rounded-xl border border-dark-700">
+                            <div className="flex items-center gap-4 mb-3">
+                                <div className="p-2 bg-dark-700 rounded-lg">
+                                    <Mic className="w-5 h-5 text-primary-400" />
+                                </div>
+                                <div>
+                                    <div className="font-medium text-white">Wake Word</div>
+                                    <div className="text-sm text-dark-400">Say this to activate voice commands</div>
+                                </div>
+                            </div>
+                            <input
+                                type="text"
+                                defaultValue="hey wakey"
+                                className="input-field w-full"
+                            />
+                        </div>
+
+                        <div className="bg-dark-800 rounded-xl border border-dark-700 divide-y divide-dark-700">
+                            <div className="p-4">
+                                <h3 className="font-medium text-white mb-3">Available Commands</h3>
+                            </div>
+                            {[
+                                { command: '"Start focus"', action: 'Begin a focus session' },
+                                { command: '"Take a break"', action: 'Start a break timer' },
+                                { command: '"Create task: [title]"', action: 'Add a new task' },
+                                { command: '"Show my tasks"', action: 'Navigate to tasks' },
+                                { command: '"Status"', action: 'Get productivity summary' },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center justify-between p-4">
+                                    <code className="text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded">{item.command}</code>
+                                    <span className="text-dark-400 text-sm">{item.action}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

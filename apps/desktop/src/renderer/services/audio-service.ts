@@ -153,8 +153,8 @@ class AudioService {
      */
     private playTone(
         context: AudioContext,
-        oscillator: OscillatorNode,
-        gain: GainNode,
+        _oscillator: OscillatorNode,
+        _gain: GainNode,
         duration: number,
         frequencies: number[]
     ): void {

@@ -37,7 +37,7 @@ class DeepWorkService {
     private sessions: DeepWorkSession[] = [];
     private currentSession: DeepWorkSession | null = null;
     private sessionStartTime: Date | null = null;
-    private contextSwitchCount: number = 0;
+    private _contextSwitchCount: number = 0;
     private lastActivityTime: Date = new Date();
     private focusedApps: Set<string> = new Set();
 
@@ -69,7 +69,7 @@ class DeepWorkService {
     /**
      * Process activity event from tracking
      */
-    processActivity(appName: string, windowTitle: string): void {
+    processActivity(appName: string, _windowTitle: string): void {
         const now = new Date();
         const isDistraction = this.isDistractionApp(appName);
 
@@ -103,7 +103,7 @@ class DeepWorkService {
 
     private startNewSession(): void {
         this.sessionStartTime = new Date();
-        this.contextSwitchCount = 0;
+        this._contextSwitchCount = 0;
         this.focusedApps = new Set();
 
         this.currentSession = {
@@ -207,6 +207,13 @@ class DeepWorkService {
     getTimeUntilDeepWork(): number {
         if (!this.currentSession) return this.config.minimumMinutes;
         return Math.max(0, this.config.minimumMinutes - this.currentSession.durationMinutes);
+    }
+
+    /**
+     * Get context switch count for current session
+     */
+    getContextSwitchCount(): number {
+        return this._contextSwitchCount;
     }
 
     /**

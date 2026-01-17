@@ -1,4 +1,4 @@
-import { Keyboard, Command, Search, Play, Pause, Settings, BarChart3, Target, Clock, Music } from 'lucide-react';
+import { Keyboard, Command, Search, Target, Clock, Music } from 'lucide-react';
 
 interface Shortcut {
     keys: string[];

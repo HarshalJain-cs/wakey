@@ -81,7 +81,15 @@ async function callGroq(messages: ChatMessage[], maxTokens: number = 200): Promi
     return data.choices[0]?.message?.content || '';
 }
 
-async function callOllama(prompt: string): Promise<string> {
+/**
+ * Calls Ollama for local AI inference (offline fallback).
+ * Kept for future implementation of offline mode.
+ *
+ * @internal
+ * @param prompt - The prompt to send to Ollama
+ * @returns The generated response
+ */
+export async function callOllama(prompt: string): Promise<string> {
     try {
         const response = await fetch(OLLAMA_API_URL, {
             method: 'POST',
