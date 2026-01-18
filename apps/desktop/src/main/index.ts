@@ -611,6 +611,10 @@ async function startTracking(): Promise<void> {
     if (trackingInterval) return;
     console.log('Starting activity tracking...');
 
+    // Set tracking status immediately
+    isTracking = true;
+    mainWindow?.webContents.send('tracking-toggle', true);
+
     // Dynamic import of active-win (ESM module)
     let getActiveWindow: (() => Promise<import('active-win').Result | undefined>) | null = null;
     try {
@@ -640,9 +644,6 @@ async function startTracking(): Promise<void> {
             console.error('Tracking error:', error);
         }
     }, 5000); // Poll every 5 seconds for better accuracy
-
-    isTracking = true;
-    mainWindow?.webContents.send('tracking-toggle', true);
 }
 
 function stopTracking(): void {
