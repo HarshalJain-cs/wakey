@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Wakey Activity Tracker",
+  "version": "0.1.0",
+  "description": "Tracks browser activity for Wakey productivity app. See what websites you spend time on and improve your focus.",
+  "permissions": [
+    "tabs",
+    "idle",
+    "storage",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_popup": "popup/popup.html",
+    "default_title": "Wakey Activity Tracker"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

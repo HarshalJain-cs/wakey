@@ -20,6 +20,7 @@ import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } 
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import Store from 'electron-store';
+import { WebSocketServer, WebSocket } from 'ws';
 
 // ============================================
 // Type Definitions
@@ -200,6 +201,187 @@ let trackingInterval: NodeJS.Timeout | null = null;
 let currentActivityId: number | null = null;
 let currentActivityStart: number | null = null;
 let lastAppName: string | null = null;
+
+// ============================================
+// Browser Activity Tracking (via Extension)
+// ============================================
+
+let browserWss: WebSocketServer | null = null;
+const BROWSER_WS_PORT = 8765;
+
+/**
+ * Browser activity event received from the browser extension.
+ */
+interface BrowserEvent {
+    type: 'tab_activated' | 'url_changed' | 'tab_closed' | 'idle_state' | 'extension_connected';
+    url?: string;
+    title?: string;
+    domain?: string;
+    timestamp: number;
+    tabId?: number;
+    browser?: string;
+    state?: string;
+}
+
+/**
+ * Domain categorization rules for browser productivity tracking.
+ */
+const DOMAIN_CATEGORY_RULES: Record<string, { category: string; isDistraction: boolean }> = {
+    // Productive domains
+    'github.com': { category: 'Development', isDistraction: false },
+    'gitlab.com': { category: 'Development', isDistraction: false },
+    'stackoverflow.com': { category: 'Development', isDistraction: false },
+    'docs.google.com': { category: 'Productivity', isDistraction: false },
+    'notion.so': { category: 'Productivity', isDistraction: false },
+    'figma.com': { category: 'Design', isDistraction: false },
+    'linear.app': { category: 'Productivity', isDistraction: false },
+    'jira.atlassian.com': { category: 'Productivity', isDistraction: false },
+    'trello.com': { category: 'Productivity', isDistraction: false },
+    'asana.com': { category: 'Productivity', isDistraction: false },
+
+    // Distracting domains
+    'youtube.com': { category: 'Entertainment', isDistraction: true },
+    'twitter.com': { category: 'Social Media', isDistraction: true },
+    'x.com': { category: 'Social Media', isDistraction: true },
+    'reddit.com': { category: 'Social Media', isDistraction: true },
+    'facebook.com': { category: 'Social Media', isDistraction: true },
+    'instagram.com': { category: 'Social Media', isDistraction: true },
+    'tiktok.com': { category: 'Social Media', isDistraction: true },
+    'netflix.com': { category: 'Entertainment', isDistraction: true },
+    'twitch.tv': { category: 'Entertainment', isDistraction: true },
+
+    // Communication (neutral - context dependent)
+    'slack.com': { category: 'Communication', isDistraction: false },
+    'discord.com': { category: 'Communication', isDistraction: false },
+    'teams.microsoft.com': { category: 'Communication', isDistraction: false },
+    'mail.google.com': { category: 'Communication', isDistraction: false },
+    'outlook.live.com': { category: 'Communication', isDistraction: false },
+};
+
+/**
+ * Categorizes a domain and determines if it's a distraction.
+ */
+function categorizeDomain(domain: string): { category: string; isDistraction: boolean } {
+    // Check exact match
+    if (DOMAIN_CATEGORY_RULES[domain]) {
+        return DOMAIN_CATEGORY_RULES[domain];
+    }
+
+    // Check subdomain match (e.g., mail.google.com matches google.com rules if defined)
+    for (const [ruleDomain, category] of Object.entries(DOMAIN_CATEGORY_RULES)) {
+        if (domain.endsWith('.' + ruleDomain) || domain === ruleDomain) {
+            return category;
+        }
+    }
+
+    // Check custom distractions from settings
+    const customDistractions = store.get('settings.customDistractions', []) as string[];
+    const isCustomDistraction = customDistractions.some(d => domain.includes(d.toLowerCase()));
+
+    return {
+        category: 'Browser',
+        isDistraction: isCustomDistraction
+    };
+}
+
+/**
+ * Handles browser activity events from the extension.
+ */
+function handleBrowserEvent(event: BrowserEvent): void {
+    if (event.type === 'extension_connected') {
+        console.log(`Browser extension connected: ${event.browser}`);
+        return;
+    }
+
+    if (event.type === 'idle_state') {
+        console.log(`Browser idle state: ${event.state}`);
+        return;
+    }
+
+    if (!event.url || !event.domain) return;
+
+    const { category, isDistraction } = categorizeDomain(event.domain);
+
+    // Log as browser activity
+    const browserActivity = {
+        type: event.type,
+        url: event.url,
+        domain: event.domain,
+        title: event.title || '',
+        category,
+        isDistraction,
+        browser: event.browser || 'Unknown',
+        timestamp: event.timestamp,
+    };
+
+    // Send to renderer for dashboard display
+    mainWindow?.webContents.send('browser-activity', browserActivity);
+
+    // Send distraction alert if applicable
+    if (isDistraction && mainWindow) {
+        mainWindow.webContents.send('distraction-detected', {
+            app: `${event.browser} - ${event.domain}`,
+            title: event.title || event.url
+        });
+    }
+
+    console.log(`Browser activity: ${event.domain} (${category}) - ${isDistraction ? 'DISTRACTION' : 'OK'}`);
+}
+
+/**
+ * Starts the WebSocket server for browser extension communication.
+ */
+function startBrowserTrackingServer(): void {
+    if (browserWss) return;
+
+    try {
+        browserWss = new WebSocketServer({ port: BROWSER_WS_PORT });
+
+        browserWss.on('connection', (ws: WebSocket) => {
+            console.log('Browser extension connected via WebSocket');
+
+            ws.on('message', (data: Buffer) => {
+                try {
+                    const event: BrowserEvent = JSON.parse(data.toString());
+                    handleBrowserEvent(event);
+                } catch (error) {
+                    console.error('Failed to parse browser event:', error);
+                }
+            });
+
+            ws.on('close', () => {
+                console.log('Browser extension disconnected');
+            });
+
+            ws.on('error', (error) => {
+                console.error('WebSocket error:', error);
+            });
+        });
+
+        browserWss.on('error', (error) => {
+            console.error('WebSocket server error:', error);
+            // Try to restart on a different port if port is in use
+            if ((error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
+                console.log('Port in use, will retry...');
+            }
+        });
+
+        console.log(`Browser tracking WebSocket server started on ws://localhost:${BROWSER_WS_PORT}`);
+    } catch (error) {
+        console.error('Failed to start browser tracking server:', error);
+    }
+}
+
+/**
+ * Stops the WebSocket server.
+ */
+function stopBrowserTrackingServer(): void {
+    if (browserWss) {
+        browserWss.close();
+        browserWss = null;
+        console.log('Browser tracking WebSocket server stopped');
+    }
+}
 
 // ============================================
 // App Categorization & Distraction Detection
@@ -549,7 +731,14 @@ function setupIpcHandlers(): void {
     ipcMain.handle('window-maximize', () => mainWindow?.isMaximized() ? mainWindow.unmaximize() : mainWindow?.maximize());
     ipcMain.handle('window-close', () => mainWindow?.hide());
     ipcMain.handle('get-tracking-status', () => isTracking);
-    ipcMain.handle('set-tracking-status', (_e, status: boolean) => { status && !isTracking ? startTracking() : !status && isTracking ? stopTracking() : null; return isTracking; });
+    ipcMain.handle('set-tracking-status', async (_e, status: boolean) => {
+        if (status && !isTracking) {
+            await startTracking();
+        } else if (!status && isTracking) {
+            stopTracking();
+        }
+        return isTracking;
+    });
     ipcMain.handle('get-today-activities', () => store.get('activities', []).filter(a => a.created_at.startsWith(getToday())));
     ipcMain.handle('get-today-stats', () => getTodayStats());
     ipcMain.handle('get-current-activity', () => lastAppName ? { app: lastAppName, category: categorizeApp(lastAppName) } : null);
@@ -590,6 +779,10 @@ app.whenReady().then(() => {
     setupIpcHandlers();
 
     if (store.get('settings.autoStartTracking')) startTracking();
+
+    // Start browser extension WebSocket server
+    startBrowserTrackingServer();
+
     app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
@@ -603,6 +796,7 @@ app.on('before-quit', () => {
         }
     }
     stopTracking();
+    stopBrowserTrackingServer();
 });
 
 const gotTheLock = app.requestSingleInstanceLock();
