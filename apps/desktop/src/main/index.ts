@@ -16,7 +16,7 @@
  * @see {@link https://www.electronjs.org/docs/latest/tutorial/process-model Electron Process Model}
  */
 
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import Store from 'electron-store';
@@ -481,113 +481,13 @@ function isDistraction(appName: string): boolean {
  * Gets today's date as an ISO date string (YYYY-MM-DD).
  * Used for filtering activities and sessions by day.
  */
-// Widget Window
-let widgetWindow: BrowserWindow | null = null;
+
 
 function getToday(): string {
     return new Date().toISOString().split('T')[0];
 }
 
-function createWidgetWindow(): void {
-    if (widgetWindow) return;
 
-    const { screen } = require('electron');
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
-
-    // Position bottom-right by default (with 20px padding)
-    const widgetWidth = 320;
-    const widgetHeight = 60;
-    const x = width - widgetWidth - 20;
-    const y = height - widgetHeight - 20;
-
-    widgetWindow = new BrowserWindow({
-        width: widgetWidth,
-        height: widgetHeight,
-        x: x,
-        y: y,
-        useContentSize: true,
-        frame: false,
-        transparent: true,
-        resizable: false,
-        hasShadow: false,
-        alwaysOnTop: true,
-        skipTaskbar: true, // Don't show in taskbar
-        backgroundColor: '#00000000', // Explicit transparent background
-        webPreferences: {
-            preload: join(__dirname, '../preload/index.js'),
-            sandbox: false,
-            contextIsolation: true,
-        },
-    });
-
-    widgetWindow.on('ready-to-show', () => {
-        widgetWindow?.show();
-    });
-
-    widgetWindow.webContents.setWindowOpenHandler((details) => {
-        shell.openExternal(details.url);
-        return { action: 'deny' };
-    });
-
-    // Load remote URL for development or local index.html for production
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-        widgetWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/widget.html`);
-    } else {
-        widgetWindow.loadFile(join(__dirname, '../renderer/widget.html'));
-    }
-}
-
-function toggleWidget() {
-    if (widgetWindow) {
-        if (widgetWindow.isVisible()) {
-            widgetWindow.hide();
-        } else {
-            widgetWindow.show();
-        }
-    } else {
-        createWidgetWindow();
-    }
-}
-
-function sendWidgetUpdate() {
-    if (!widgetWindow || widgetWindow.isDestroyed()) return;
-
-    // Calculate stats
-    const today = getToday();
-    const todaysActivities = store.get('activities', []).filter(a => a.created_at.startsWith(today));
-
-    // Calculate total duration
-    let totalSeconds = todaysActivities.reduce((acc, curr) => acc + (curr.duration_seconds || 0), 0);
-
-    // Add current session if valid
-    if (isTracking && currentActivityStart) {
-        const elapsed = Math.floor((Date.now() - currentActivityStart) / 1000);
-        totalSeconds += elapsed;
-    }
-
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const timeString = `${hours} hr ${minutes} min`;
-
-    // Calculate progress (assuming 8 hour goal for now, can be made configurable later)
-    const goalSeconds = 8 * 3600;
-    const progress = Math.min((totalSeconds / goalSeconds) * 100, 100);
-
-    widgetWindow.webContents.send('widget-update', {
-        isTracking,
-        todayTime: timeString,
-        progress
-    });
-}
-
-function updateWidgetLoop() {
-    setInterval(() => {
-        if (isTracking) {
-            sendWidgetUpdate();
-        }
-    }, 60000); // Update every minute to keep time accurate
-}
 
 // ============================================
 // Activity Tracking
@@ -855,7 +755,7 @@ function createTray(): void {
             { type: 'separator' },
             { label: '🎯 Start Focus', click: () => { mainWindow?.show(); mainWindow?.webContents.send('focus-start'); } },
             { label: '📊 Dashboard', click: () => mainWindow?.show() },
-            { label: '🖼️ Toggle Widget', click: () => toggleWidget() },
+
             { type: 'separator' },
             { label: '⚙️ Settings', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', '/settings'); } },
             { type: 'separator' },
@@ -899,7 +799,7 @@ function setupIpcHandlers(): void {
             stopTracking();
         }
         console.log('[IPC] New tracking status:', isTracking);
-        sendWidgetUpdate(); // Push update immediately
+
         return isTracking;
     });
     ipcMain.handle('get-today-activities', () => store.get('activities', []).filter(a => a.created_at.startsWith(getToday())));
@@ -930,13 +830,14 @@ function setupIpcHandlers(): void {
     // Phase 5: Agent handlers
     ipcMain.handle('get-agent-tasks', () => store.get('agentTasks', []));
     ipcMain.handle('save-agent-tasks', (_e, tasks: AgentTask[]) => { store.set('agentTasks', tasks); return true; });
-    ipcMain.on('request-widget-update', () => sendWidgetUpdate());
+
     ipcMain.on('open-dashboard', () => {
         if (mainWindow) {
             mainWindow.show();
             mainWindow.focus();
         }
     });
+
     ipcMain.on('open-settings', () => {
         if (mainWindow) {
             mainWindow.show();
@@ -944,15 +845,11 @@ function setupIpcHandlers(): void {
             mainWindow.webContents.send('navigate', '/settings');
         }
     });
+
     ipcMain.on('quit-app', () => {
         app.quit();
     });
-    ipcMain.on('toggle-widget', () => toggleWidget());
-    ipcMain.on('resize-widget', (_event, width, height) => {
-        if (widgetWindow && !widgetWindow.isDestroyed()) {
-            widgetWindow.setSize(width, height);
-        }
-    });
+
 }
 
 app.whenReady().then(() => {
@@ -960,11 +857,11 @@ app.whenReady().then(() => {
     app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
 
     createWindow();
-    createWidgetWindow(); // Start widget
+
     createTray();
     registerShortcuts();
     setupIpcHandlers();
-    updateWidgetLoop(); // Start widget update loop
+
 
     if (store.get('settings.autoStartTracking')) startTracking();
 

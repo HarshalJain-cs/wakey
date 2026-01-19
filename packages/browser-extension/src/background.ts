@@ -64,7 +64,9 @@ function connectToWakey(): void {
         ws = new WebSocket(WAKEY_WS_URL);
 
         ws.onopen = () => {
-            console.log('[Wakey] Connected to desktop app');
+            console.log('[Wakey Extension] Successfully connected to Wakey Desktop App via WebSocket');
+            chrome.action.setBadgeText({ text: 'ON' });
+            chrome.action.setBadgeBackgroundColor({ color: '#10b981' });
             reconnectAttempts = 0;
             sendEvent({ type: 'extension_connected' });
 
@@ -88,7 +90,9 @@ function connectToWakey(): void {
         };
 
         ws.onclose = () => {
-            console.log('[Wakey] Disconnected from desktop app');
+            console.log('[Wakey Extension] Disconnected from desktop app - attempting reconnect...');
+            chrome.action.setBadgeText({ text: 'OFF' });
+            chrome.action.setBadgeBackgroundColor({ color: '#6b7280' });
             ws = null;
 
             // Reconnect with exponential backoff

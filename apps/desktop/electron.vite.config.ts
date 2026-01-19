@@ -24,7 +24,6 @@ export default defineConfig({
             rollupOptions: {
                 input: {
                     index: resolve(__dirname, 'src/renderer/index.html'),
-                    widget: resolve(__dirname, 'src/renderer/widget.html'),
                 },
             },
         },
