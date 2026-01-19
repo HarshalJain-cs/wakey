@@ -22,7 +22,10 @@ export default defineConfig({
         build: {
             outDir: resolve(__dirname, 'out/renderer'),
             rollupOptions: {
-                input: resolve(__dirname, 'src/renderer/index.html'),
+                input: {
+                    index: resolve(__dirname, 'src/renderer/index.html'),
+                    widget: resolve(__dirname, 'src/renderer/widget.html'),
+                },
             },
         },
         plugins: [react()],

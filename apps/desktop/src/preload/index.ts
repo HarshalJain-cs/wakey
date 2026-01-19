@@ -57,6 +57,13 @@ contextBridge.exposeInMainWorld('wakey', {
     onActivityUpdate: (callback: (activity: { app: string; title: string; category: string; isDistraction: boolean }) => void) => {
         ipcRenderer.on('activity-update', (_event, activity) => callback(activity));
     },
+    // Widget IPC
+    onWidgetUpdate: (callback: (data: any) => void) => ipcRenderer.on('widget-update', (_e, data) => callback(data)),
+    requestWidgetUpdate: () => ipcRenderer.send('request-widget-update'),
+    openDashboard: () => ipcRenderer.send('open-dashboard'),
+    openSettings: () => ipcRenderer.send('open-settings'),
+    quitApp: () => ipcRenderer.send('quit-app'),
+
     onDistractionDetected: (callback: (data: { app: string; title: string }) => void) => {
         ipcRenderer.on('distraction-detected', (_event, data) => callback(data));
     },
@@ -115,15 +122,12 @@ declare global {
             onNavigate: (callback: (route: string) => void) => void;
             onActivityUpdate: (callback: (activity: { app: string; title: string; category: string; isDistraction: boolean }) => void) => void;
             onDistractionDetected: (callback: (data: { app: string; title: string }) => void) => void;
-            onBrowserActivity: (callback: (data: {
-                type: string;
-                url: string;
-                domain: string;
-                title: string;
-                category: string;
-                isDistraction: boolean;
-                timestamp: number;
-            }) => void) => void;
+            onBrowserActivity: (callback: (data: any) => void) => void;
+            onWidgetUpdate: (callback: (data: { isTracking: boolean; todayTime: string; progress: number }) => void) => void;
+            requestWidgetUpdate: () => void;
+            openDashboard: () => void;
+            openSettings: () => void;
+            quitApp: () => void;
             checkForUpdates: () => Promise<any>;
             downloadUpdate: () => Promise<boolean>;
             installUpdate: () => Promise<void>;
