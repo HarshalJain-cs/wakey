@@ -484,6 +484,10 @@ function isDistraction(appName: string): boolean {
 // Widget Window
 let widgetWindow: BrowserWindow | null = null;
 
+function getToday(): string {
+    return new Date().toISOString().split('T')[0];
+}
+
 function createWidgetWindow(): void {
     if (widgetWindow) return;
 
