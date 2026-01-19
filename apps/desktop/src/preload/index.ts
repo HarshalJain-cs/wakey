@@ -60,6 +60,9 @@ contextBridge.exposeInMainWorld('wakey', {
     onDistractionDetected: (callback: (data: { app: string; title: string }) => void) => {
         ipcRenderer.on('distraction-detected', (_event, data) => callback(data));
     },
+    onBrowserActivity: (callback: (data: any) => void) => {
+        ipcRenderer.on('browser-activity', (_event, data) => callback(data));
+    },
 
     // Auto-Update
     checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
@@ -112,6 +115,15 @@ declare global {
             onNavigate: (callback: (route: string) => void) => void;
             onActivityUpdate: (callback: (activity: { app: string; title: string; category: string; isDistraction: boolean }) => void) => void;
             onDistractionDetected: (callback: (data: { app: string; title: string }) => void) => void;
+            onBrowserActivity: (callback: (data: {
+                type: string;
+                url: string;
+                domain: string;
+                title: string;
+                category: string;
+                isDistraction: boolean;
+                timestamp: number;
+            }) => void) => void;
             checkForUpdates: () => Promise<any>;
             downloadUpdate: () => Promise<boolean>;
             installUpdate: () => Promise<void>;

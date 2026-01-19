@@ -326,6 +326,50 @@ function handleBrowserEvent(event: BrowserEvent): void {
     }
 
     console.log(`Browser activity: ${event.domain} (${category}) - ${isDistraction ? 'DISTRACTION' : 'OK'}`);
+
+    // Persist browser activity if tracking is active
+    if (isTracking && event.type === 'tab_activated' || event.type === 'url_changed') {
+        logActivity(event.browser || 'Browser', event.title || event.url || 'Unknown Key');
+        // Note: logActivity might overwrite 'Browser' with generic name.
+        // Ideally we should enhance logActivity to accept metadata, but for now let's just trigger it.
+        // Actually, let's manually inject into the store to preserve URL details.
+
+        const activities = store.get('activities', []);
+        const nextIds = store.get('nextIds');
+
+        // Update duration of previous activity if it matches
+        if (lastAppName === (event.browser || 'Browser') && currentActivityId && currentActivityStart) {
+            // We might want to close the previous "generic" browser activity and start a specific one?
+            // For simplicity, let's treat this as a NEW activity event
+        }
+
+        // Create rich activity entry
+        const activity: Activity = {
+            id: nextIds.activity,
+            app_name: event.browser || 'Browser',
+            window_title: `${event.domain} - ${event.title || ''}`, // Put domain in title for visibility
+            category: category,
+            is_distraction: isDistraction,
+            duration_seconds: 0,
+            created_at: new Date().toISOString(),
+        };
+
+        activities.push(activity);
+        store.set('activities', activities);
+        store.set('nextIds.activity', nextIds.activity + 1);
+
+        currentActivityId = activity.id;
+        currentActivityStart = Date.now();
+        lastAppName = event.browser || 'Browser';
+
+        // Also notify renderer
+        mainWindow?.webContents.send('activity-update', {
+            app: activity.app_name,
+            title: activity.window_title,
+            category,
+            isDistraction
+        });
+    }
 }
 
 /**
