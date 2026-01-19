@@ -948,6 +948,11 @@ function setupIpcHandlers(): void {
         app.quit();
     });
     ipcMain.on('toggle-widget', () => toggleWidget());
+    ipcMain.on('resize-widget', (_event, width, height) => {
+        if (widgetWindow && !widgetWindow.isDestroyed()) {
+            widgetWindow.setSize(width, height);
+        }
+    });
 }
 
 app.whenReady().then(() => {

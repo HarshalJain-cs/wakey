@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, ChevronLeft } from 'lucide-react';
 import WidgetMenu from './WidgetMenu';
 
 interface WidgetState {
@@ -15,6 +15,7 @@ export default function FloatingWidget() {
         progress: 0
     });
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
 
     useEffect(() => {
         // Listen for updates from main process
@@ -24,7 +25,19 @@ export default function FloatingWidget() {
 
         // Initial sync
         window.wakey?.requestWidgetUpdate();
+
+        // Set initial size
+        window.wakey?.resizeWidget(450, 70);
     }, []);
+
+    // Handle collapse/expand resizing
+    useEffect(() => {
+        if (isCollapsed) {
+            window.wakey?.resizeWidget(70, 70);
+        } else {
+            window.wakey?.resizeWidget(450, 70);
+        }
+    }, [isCollapsed]);
 
     const handleToggleTracking = () => {
         // Toggle locally immediately for responsiveness
@@ -32,44 +45,67 @@ export default function FloatingWidget() {
         window.wakey?.setTrackingStatus(!state.isTracking);
     };
 
-    return (
-        <div className="w-full h-full flex items-center justify-center p-2 drag-region">
-            <div className="relative bg-[#1a1b26]/90 backdrop-blur-md border border-dark-700 rounded-full shadow-2xl flex items-center px-4 py-2 gap-4 text-white min-w-[300px] select-none">
-
-                {/* Status Indicator */}
-                <div className="flex items-center gap-2 no-drag cursor-pointer" onClick={handleToggleTracking}>
-                    <div className={`w-2 h-2 rounded-full ${state.isTracking ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
-                    <span className="text-xs font-medium text-dark-200 uppercase tracking-wider">
-                        {state.isTracking ? 'TRACKING' : 'PAUSED'}
-                    </span>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-6 bg-dark-700" />
-
-                {/* Time Display */}
-                <div className="flex flex-col min-w-[80px]">
-                    <span className="text-sm font-bold leading-none mb-0.5">{state.todayTime}</span>
-                    <div className="w-full h-1 bg-dark-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-primary-500 rounded-full transition-all duration-500"
-                            style={{ width: `${state.progress}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Percentage */}
-                <span className="text-xs font-medium text-dark-300">
-                    {Math.round(state.progress)}%
-                </span>
-
-                {/* Menu Button */}
+    if (isCollapsed) {
+        return (
+            <div className="w-full h-full flex items-center justify-center p-1 drag-region">
                 <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="ml-auto p-1.5 hover:bg-dark-700 rounded-full transition-colors no-drag"
+                    onClick={() => setIsCollapsed(false)}
+                    className="w-12 h-12 bg-[#0F1117] border border-white/10 rounded-lg flex items-center justify-center shadow-xl hover:bg-dark-800 transition-colors group no-drag"
                 >
-                    <MoreHorizontal className="w-4 h-4 text-dark-300" />
+                    <div className={`w-3 h-3 rounded-full ${state.isTracking ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
                 </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-full flex items-center justify-center p-1 drag-region">
+            <div className="relative bg-[#0F1117] border border-white/10 rounded-lg shadow-2xl flex items-center px-4 py-2 gap-6 h-[56px] select-none text-white">
+
+                {/* 1. Status Section */}
+                <div className="flex flex-col justify-center min-w-[80px] cursor-pointer no-drag" onClick={handleToggleTracking}>
+                    <div className="flex items-center gap-2">
+                        {state.isTracking ?
+                            <span className="text-base font-bold text-white tracking-wide">Tracking</span> :
+                            <span className="text-base font-bold text-white tracking-wide">Paused</span>
+                        }
+                        <div className={`w-2 h-2 rounded-full ${state.isTracking ? 'bg-green-500 animate-pulse' : 'bg-orange-500'}`} />
+                    </div>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">TRACKING STATUS</span>
+                </div>
+
+                <div className="w-[1px] h-8 bg-white/5" />
+
+                {/* 2. Time Section */}
+                <div className="flex flex-col justify-center min-w-[100px]">
+                    <span className="text-base font-bold text-[#818cf8] tracking-wide font-mono">{state.todayTime}</span>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">WORK HOURS</span>
+                </div>
+
+                <div className="w-[1px] h-8 bg-white/5" />
+
+                {/* 3. Percent Section */}
+                <div className="flex flex-col justify-center min-w-[50px]">
+                    <span className="text-base font-bold text-gray-300 tracking-wide font-mono">{Math.round(state.progress)}%</span>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">PERCENT OF DAY</span>
+                </div>
+
+                {/* Controls */}
+                <div className="flex items-center gap-1 ml-2">
+                    <button
+                        onClick={() => setIsCollapsed(true)}
+                        className="p-1.5 hover:bg-white/10 rounded-md transition-colors no-drag text-gray-400 hover:text-white"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        className="p-1.5 hover:bg-white/10 rounded-md transition-colors no-drag text-gray-400 hover:text-white"
+                    >
+                        <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                </div>
 
                 {/* Context Menu */}
                 <WidgetMenu
