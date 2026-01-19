@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
-import DistractionAlert, { useDistractionAlert } from './components/DistractionAlert';
+import ProductivityCoach from './components/ProductivityCoach';
 import OnboardingWizard from './components/OnboardingWizard';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
 import Dashboard from './pages/Dashboard';
@@ -26,7 +26,7 @@ import GoalsPage from './pages/GoalsPage';
 import MusicPage from './pages/MusicPage';
 import ShortcutsPage from './pages/ShortcutsPage';
 import WorkflowsPage from './pages/WorkflowsPage';
-import EyeBreakReminder from './components/EyeBreakReminder';
+// EyeBreakReminder is now handled by ProductivityCoach/WorkBreakReminder
 import * as supabaseAuth from './services/supabase-auth';
 
 export default function App() {
@@ -37,7 +37,7 @@ export default function App() {
     const [authLoading, setAuthLoading] = useState(true);
     const [requireAuth, setRequireAuth] = useState(true);
     const navigate = useNavigate();
-    const { alert, dismiss, block } = useDistractionAlert();
+    // ProductivityCoach handles distraction alerts and break reminders internally
     const commandPalette = useCommandPalette();
 
     useEffect(() => {
@@ -166,9 +166,8 @@ export default function App() {
                 </main>
             </div>
             {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
-            {alert && <DistractionAlert app={alert.app} title={alert.title} onDismiss={dismiss} onBlock={block} />}
+            <ProductivityCoach />
             <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
-            <EyeBreakReminder enabled={true} intervalMinutes={20} />
         </div>
     );
 }
