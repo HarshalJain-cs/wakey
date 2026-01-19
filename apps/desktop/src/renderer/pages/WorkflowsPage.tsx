@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, JSX } from 'react';
 import {
     Workflow, Play, Pause, Plus, Trash2, Settings,
     Zap, Clock, CheckCircle, AlertTriangle, ChevronRight,

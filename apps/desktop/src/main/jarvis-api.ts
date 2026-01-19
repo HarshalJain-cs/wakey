@@ -405,7 +405,7 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
         try {
             const { app } = await import('electron');
             return { success: true, data: app.getVersion() };
-        } catch (error) {
+        } catch {
             return { success: true, data: '1.0.0' };
         }
     });

@@ -184,7 +184,7 @@ class NotionIntegrationService {
             throw new Error('Notion API key not configured');
         }
 
-        const options: RequestInit = {
+        const options: Parameters<typeof fetch>[1] = {
             method,
             headers: {
                 'Authorization': `Bearer ${key}`,

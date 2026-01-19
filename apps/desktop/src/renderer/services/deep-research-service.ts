@@ -389,7 +389,7 @@ class DeepResearchService {
         });
     }
 
-    private extractFindings(sources: ResearchSource[], query: string): ResearchFinding[] {
+    private extractFindings(sources: ResearchSource[], _query: string): ResearchFinding[] {
         // Extract key findings from sources
         const findings: ResearchFinding[] = [];
 

@@ -259,7 +259,7 @@ class NaturalLanguageTaskService {
         }
 
         // Remove explicit dates
-        result = result.replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '');
+        result = result.replace(/\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/g, '');
 
         // Remove common prepositions left behind
         result = result.replace(/\b(by|on|due|before)\s*$/gi, '');

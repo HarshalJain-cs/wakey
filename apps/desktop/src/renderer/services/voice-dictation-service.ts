@@ -12,15 +12,34 @@
  */
 
 // Web Speech API Types (for TypeScript)
+interface SpeechRecognitionResult {
+    readonly length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+    readonly isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+    readonly transcript: string;
+    readonly confidence: number;
+}
+
+interface SpeechRecognitionResultListType {
+    readonly length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+
 interface SpeechRecognitionEvent extends Event {
     resultIndex: number;
-    results: SpeechRecognitionResultList;
+    results: SpeechRecognitionResultListType;
 }
 
 interface SpeechRecognitionErrorEvent extends Event {
     error: string;
     message: string;
 }
+
 
 interface SpeechRecognition extends EventTarget {
     lang: string;
@@ -84,7 +103,7 @@ export type VoiceStatus = 'idle' | 'listening' | 'processing' | 'speaking' | 'er
 class VoiceDictationService {
     private config: VoiceConfig;
     private recognition: SpeechRecognition | null = null;
-    private synthesis: SpeechSynthesis | null = null;
+    private synthesis: typeof window.speechSynthesis | null = null;
     private status: VoiceStatus = 'idle';
     private transcript: TranscriptEntry[] = [];
     private commands: VoiceCommand[] = [];
@@ -430,7 +449,7 @@ class VoiceDictationService {
 
         try {
             this.recognition.start();
-        } catch (error) {
+        } catch {
             // Already listening
             console.log('[Voice] Already listening');
         }

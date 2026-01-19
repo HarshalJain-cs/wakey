@@ -26,7 +26,7 @@ export default function WorkBreakReminder({
     const [breakTimeRemaining, setBreakTimeRemaining] = useState(breakDurationMinutes * 60);
     const [workTimeElapsed, setWorkTimeElapsed] = useState(0);
     const [snoozeCount, setSnoozeCount] = useState(0);
-    const [lastBreakTime, setLastBreakTime] = useState(Date.now());
+    const [_lastBreakTime, setLastBreakTime] = useState(Date.now());
 
     // Work timer - tracks time since last break
     useEffect(() => {

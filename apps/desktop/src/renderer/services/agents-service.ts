@@ -192,7 +192,7 @@ Keep the response concise (3-4 sentences).`;
                         ['research', 'auto-generated', ...topic.keywords]
                     );
                 }
-            } catch (error) {
+            } catch {
                 results.push(`${topic.topic}: Failed to research`);
             }
         }
@@ -482,12 +482,12 @@ Be specific and actionable.`;
                         newPredictions.push(currentPrediction as TaskPrediction);
                     }
                     currentPrediction = {
-                        title: line.replace(/^[\d.\-\*]+\s*/, '').replace(/task:?/i, '').trim(),
+                        title: line.replace(/^[\d.*-]+\s*/, '').replace(/task:?/i, '').trim(),
                         confidence: 0.7,
                         reason: '',
                     };
                 } else if (lower.includes('why') || lower.includes('reason') || lower.includes('because')) {
-                    currentPrediction.reason = line.replace(/^[\-\*]+\s*/, '').trim();
+                    currentPrediction.reason = line.replace(/^[-*]+\s*/, '').trim();
                 } else if (lower.includes('confidence')) {
                     currentPrediction.confidence = lower.includes('high') ? 0.9 : lower.includes('low') ? 0.5 : 0.7;
                 }

@@ -620,7 +620,7 @@ async function startTracking(): Promise<void> {
     try {
         const activeWinModule = await import('active-win');
         getActiveWindow = activeWinModule.default;
-    } catch (error) {
+    } catch {
         console.warn('active-win not available, using fallback tracking');
     }
 
