@@ -1,4 +1,4 @@
-import { X, BookOpen, Video, Users, FileText, MessageCircle, Mail, AlertTriangle, Lightbulb } from 'lucide-react';
+import { BookOpen, Video, Users, FileText, MessageCircle, Mail, AlertTriangle, Lightbulb } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface SupportModalProps {

@@ -1,4 +1,4 @@
-import { Play, Pause, LayoutDashboard, Settings, Power, Zap } from 'lucide-react';
+import { Play, Pause, LayoutDashboard, Settings, Power } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 interface WidgetMenuProps {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MoreHorizontal, Play, Pause } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import WidgetMenu from './WidgetMenu';
 
 interface WidgetState {
