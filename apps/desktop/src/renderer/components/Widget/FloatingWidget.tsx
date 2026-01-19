@@ -79,6 +79,7 @@ export default function FloatingWidget() {
                     onToggleTracking={handleToggleTracking}
                     onOpenDashboard={() => window.wakey?.openDashboard()}
                     onOpenSettings={() => window.wakey?.openSettings()}
+                    onHide={() => window.wakey?.toggleWidget()}
                     onQuit={() => window.wakey?.quitApp()}
                 />
             </div>

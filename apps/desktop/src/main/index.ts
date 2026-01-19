@@ -491,17 +491,29 @@ function getToday(): string {
 function createWidgetWindow(): void {
     if (widgetWindow) return;
 
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+
+    // Position bottom-right by default (with 20px padding)
+    const widgetWidth = 320;
+    const widgetHeight = 60;
+    const x = width - widgetWidth - 20;
+    const y = height - widgetHeight - 20;
+
     widgetWindow = new BrowserWindow({
-        width: 320,
-        height: 60,
-        x: 100,
-        y: 100,
+        width: widgetWidth,
+        height: widgetHeight,
+        x: x,
+        y: y,
         useContentSize: true,
         frame: false,
         transparent: true,
         resizable: false,
         hasShadow: false,
         alwaysOnTop: true,
+        skipTaskbar: true, // Don't show in taskbar
+        backgroundColor: '#00000000', // Explicit transparent background
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
             sandbox: false,
@@ -523,6 +535,18 @@ function createWidgetWindow(): void {
         widgetWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/widget.html`);
     } else {
         widgetWindow.loadFile(join(__dirname, '../renderer/widget.html'));
+    }
+}
+
+function toggleWidget() {
+    if (widgetWindow) {
+        if (widgetWindow.isVisible()) {
+            widgetWindow.hide();
+        } else {
+            widgetWindow.show();
+        }
+    } else {
+        createWidgetWindow();
     }
 }
 
@@ -831,6 +855,7 @@ function createTray(): void {
             { type: 'separator' },
             { label: '🎯 Start Focus', click: () => { mainWindow?.show(); mainWindow?.webContents.send('focus-start'); } },
             { label: '📊 Dashboard', click: () => mainWindow?.show() },
+            { label: '🖼️ Toggle Widget', click: () => toggleWidget() },
             { type: 'separator' },
             { label: '⚙️ Settings', click: () => { mainWindow?.show(); mainWindow?.webContents.send('navigate', '/settings'); } },
             { type: 'separator' },
@@ -922,6 +947,7 @@ function setupIpcHandlers(): void {
     ipcMain.on('quit-app', () => {
         app.quit();
     });
+    ipcMain.on('toggle-widget', () => toggleWidget());
 }
 
 app.whenReady().then(() => {

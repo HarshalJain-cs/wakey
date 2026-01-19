@@ -1,4 +1,4 @@
-import { Play, Pause, LayoutDashboard, Settings, Power } from 'lucide-react';
+import { Play, Pause, LayoutDashboard, Settings, Power, EyeOff } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
 interface WidgetMenuProps {
@@ -8,6 +8,7 @@ interface WidgetMenuProps {
     onToggleTracking: () => void;
     onOpenDashboard: () => void;
     onOpenSettings: () => void;
+    onHide: () => void;
     onQuit: () => void;
 }
 
@@ -18,6 +19,7 @@ export default function WidgetMenu({
     onToggleTracking,
     onOpenDashboard,
     onOpenSettings,
+    onHide,
     onQuit
 }: WidgetMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -70,6 +72,14 @@ export default function WidgetMenu({
                 >
                     <Settings className="w-4 h-4 text-gray-400" />
                     <span>Settings</span>
+                </button>
+
+                <button
+                    onClick={() => { onHide(); onClose(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white hover:bg-dark-800 rounded-md transition-colors text-left"
+                >
+                    <EyeOff className="w-4 h-4 text-gray-400" />
+                    <span>Hide Widget</span>
                 </button>
 
                 <button

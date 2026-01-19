@@ -62,6 +62,7 @@ contextBridge.exposeInMainWorld('wakey', {
     requestWidgetUpdate: () => ipcRenderer.send('request-widget-update'),
     openDashboard: () => ipcRenderer.send('open-dashboard'),
     openSettings: () => ipcRenderer.send('open-settings'),
+    toggleWidget: () => ipcRenderer.send('toggle-widget'),
     quitApp: () => ipcRenderer.send('quit-app'),
 
     onDistractionDetected: (callback: (data: { app: string; title: string }) => void) => {
@@ -127,6 +128,7 @@ declare global {
             requestWidgetUpdate: () => void;
             openDashboard: () => void;
             openSettings: () => void;
+            toggleWidget: () => void;
             quitApp: () => void;
             checkForUpdates: () => Promise<any>;
             downloadUpdate: () => Promise<boolean>;
