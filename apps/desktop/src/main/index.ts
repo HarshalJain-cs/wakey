@@ -741,11 +741,15 @@ function setupIpcHandlers(): void {
     ipcMain.handle('window-close', () => mainWindow?.hide());
     ipcMain.handle('get-tracking-status', () => isTracking);
     ipcMain.handle('set-tracking-status', async (_e, status: boolean) => {
+        console.log('[IPC] set-tracking-status called with:', status);
         if (status && !isTracking) {
+            console.log('[IPC] Starting tracking...');
             await startTracking();
         } else if (!status && isTracking) {
+            console.log('[IPC] Stopping tracking...');
             stopTracking();
         }
+        console.log('[IPC] New tracking status:', isTracking);
         return isTracking;
     });
     ipcMain.handle('get-today-activities', () => store.get('activities', []).filter(a => a.created_at.startsWith(getToday())));

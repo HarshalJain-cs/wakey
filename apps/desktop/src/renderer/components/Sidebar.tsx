@@ -21,12 +21,14 @@ import {
     Trophy,
     Target,
     Music,
-    Keyboard
+    Keyboard,
+    HelpCircle
 } from 'lucide-react';
 
 interface SidebarProps {
     isTracking: boolean;
     onTrackingToggle: () => void;
+    onSupportClick: () => void;
 }
 
 const navItems = [
@@ -51,7 +53,7 @@ const navItems = [
     { path: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-export default function Sidebar({ isTracking, onTrackingToggle }: SidebarProps) {
+export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }: SidebarProps) {
     const [stats, setStats] = useState({ focusTime: 0, sessions: 0 });
     const [currentActivity, setCurrentActivity] = useState<{ app: string; category: string } | null>(null);
 
@@ -94,7 +96,10 @@ export default function Sidebar({ isTracking, onTrackingToggle }: SidebarProps) 
             {/* Tracking status */}
             <div className="p-4 border-b border-dark-800">
                 <button
-                    onClick={onTrackingToggle}
+                    onClick={() => {
+                        console.log('[Sidebar] Toggle tracking clicked');
+                        onTrackingToggle();
+                    }}
                     className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${isTracking
                         ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
                         : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -141,6 +146,14 @@ export default function Sidebar({ isTracking, onTrackingToggle }: SidebarProps) 
                         <span className="font-medium">{label}</span>
                     </NavLink>
                 ))}
+
+                <button
+                    onClick={onSupportClick}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-dark-400 hover:text-white hover:bg-dark-800 w-full text-left"
+                >
+                    <HelpCircle className="w-5 h-5" />
+                    <span className="font-medium">Support</span>
+                </button>
             </nav>
 
             {/* Quick stats */}

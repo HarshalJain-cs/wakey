@@ -6,6 +6,7 @@ import ProductivityCoach from './components/ProductivityCoach';
 import ShortcutManager from './components/ShortcutManager';
 import OnboardingWizard from './components/OnboardingWizard';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
+import SupportModal from './components/SupportModal';
 import Dashboard from './pages/Dashboard';
 import FocusPage from './pages/FocusPage';
 import TasksPage from './pages/TasksPage';
@@ -40,6 +41,7 @@ export default function App() {
     const navigate = useNavigate();
     // ProductivityCoach handles distraction alerts and break reminders internally
     const commandPalette = useCommandPalette();
+    const [showSupportModal, setShowSupportModal] = useState(false);
 
     useEffect(() => {
         // Check if wakey API is available
@@ -140,7 +142,7 @@ export default function App() {
         <div className={`h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
             <TitleBar darkMode={darkMode} />
             <div className="flex flex-1 overflow-hidden">
-                <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} />
+                <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} onSupportClick={() => setShowSupportModal(true)} />
                 <main className="flex-1 overflow-auto bg-dark-900 p-6">
                     <Routes>
                         <Route path="/" element={<Dashboard isTracking={isTracking} />} />
@@ -170,6 +172,7 @@ export default function App() {
             <ProductivityCoach />
             <ShortcutManager />
             <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
+            <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
         </div>
     );
 }
