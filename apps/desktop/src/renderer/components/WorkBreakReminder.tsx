@@ -12,7 +12,7 @@ interface WorkBreakReminderProps {
 /**
  * Work Break Reminder Component
  * Reminds users to take a break after extended work periods
- * Inspired by Rize Productivity Coach
+ * Inspired by Wakey Productivity Coach
  */
 export default function WorkBreakReminder({
     enabled = true,
