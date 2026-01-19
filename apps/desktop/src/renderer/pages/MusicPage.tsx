@@ -15,6 +15,28 @@ export default function MusicPage() {
         setIsPlaying(state.isPlaying);
         setVolume(state.musicVolume);
         setIsMuted(state.muted);
+
+        const handleToggle = () => handlePlayTrack(audioService.getState().currentTrack);
+        const handleVolUp = () => {
+            const newVol = Math.min(1, audioService.getState().musicVolume + 0.1);
+            setVolume(newVol);
+            audioService.setMusicVolume(newVol);
+        };
+        const handleVolDown = () => {
+            const newVol = Math.max(0, audioService.getState().musicVolume - 0.1);
+            setVolume(newVol);
+            audioService.setMusicVolume(newVol);
+        };
+
+        window.addEventListener('music-toggle', handleToggle);
+        window.addEventListener('music-vol-up', handleVolUp);
+        window.addEventListener('music-vol-down', handleVolDown);
+
+        return () => {
+            window.removeEventListener('music-toggle', handleToggle);
+            window.removeEventListener('music-vol-up', handleVolUp);
+            window.removeEventListener('music-vol-down', handleVolDown);
+        };
     }, []);
 
     const handlePlayTrack = (trackId: AmbientTrack) => {
@@ -111,8 +133,8 @@ export default function MusicPage() {
                             <button
                                 onClick={() => handlePlayTrack(currentTrack)}
                                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isPlaying
-                                        ? 'bg-primary-500/20 text-primary-400'
-                                        : 'bg-primary-500 text-white'
+                                    ? 'bg-primary-500/20 text-primary-400'
+                                    : 'bg-primary-500 text-white'
                                     }`}
                             >
                                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
@@ -133,10 +155,10 @@ export default function MusicPage() {
                             onClick={() => handlePlayTrack(track.id)}
                             disabled={!track.available && track.id !== 'silence'}
                             className={`p-4 rounded-xl border text-left transition-all group ${currentTrack === track.id
-                                    ? 'border-primary-500 bg-primary-500/10'
-                                    : track.available || track.id === 'silence'
-                                        ? 'border-dark-700 bg-dark-800 hover:border-dark-600'
-                                        : 'border-dark-700 bg-dark-800/50 opacity-50 cursor-not-allowed'
+                                ? 'border-primary-500 bg-primary-500/10'
+                                : track.available || track.id === 'silence'
+                                    ? 'border-dark-700 bg-dark-800 hover:border-dark-600'
+                                    : 'border-dark-700 bg-dark-800/50 opacity-50 cursor-not-allowed'
                                 }`}
                         >
                             <div className="flex items-center justify-between">

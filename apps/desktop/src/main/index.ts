@@ -723,6 +723,14 @@ function createTray(): void {
 function registerShortcuts(): void {
     globalShortcut.register('CommandOrControl+Shift+F', () => { mainWindow?.show(); mainWindow?.webContents.send('focus-start'); });
     globalShortcut.register('CommandOrControl+Shift+T', () => { isTracking ? stopTracking() : startTracking(); });
+    globalShortcut.register('CommandOrControl+Shift+W', () => {
+        if (mainWindow?.isVisible()) {
+            mainWindow.hide();
+        } else {
+            mainWindow?.show();
+            mainWindow?.focus();
+        }
+    });
 }
 
 function setupIpcHandlers(): void {

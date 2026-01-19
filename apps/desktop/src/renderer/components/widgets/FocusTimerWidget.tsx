@@ -140,6 +140,32 @@ export default function FocusTimerWidget() {
         };
     }, [timer.isRunning, startTimer]);
 
+    // Listen for custom shortcut events
+    useEffect(() => {
+        const handleToggle = () => toggleTimer();
+        const handleReset = () => resetTimer();
+        const handleSkip = () => {
+            if (timer.timeRemaining === 0 && timer.sessionId) return; // Already finished
+            setTimer(prev => ({ ...prev, timeRemaining: 0 })); // Finish immediately
+        };
+        const handleAdd5 = () => setTimer(prev => ({ ...prev, timeRemaining: prev.timeRemaining + 5 * 60 }));
+        const handleSub5 = () => setTimer(prev => ({ ...prev, timeRemaining: Math.max(0, prev.timeRemaining - 5 * 60) }));
+
+        window.addEventListener('focus-timer-toggle', handleToggle);
+        window.addEventListener('focus-timer-reset', handleReset);
+        window.addEventListener('focus-timer-skip', handleSkip);
+        window.addEventListener('focus-timer-add-5', handleAdd5);
+        window.addEventListener('focus-timer-sub-5', handleSub5);
+
+        return () => {
+            window.removeEventListener('focus-timer-toggle', handleToggle);
+            window.removeEventListener('focus-timer-reset', handleReset);
+            window.removeEventListener('focus-timer-skip', handleSkip);
+            window.removeEventListener('focus-timer-add-5', handleAdd5);
+            window.removeEventListener('focus-timer-sub-5', handleSub5);
+        };
+    }, [toggleTimer, resetTimer, timer.timeRemaining, timer.sessionId]);
+
     const progress = timer.mode === 'focus'
         ? ((SESSION_DURATIONS[timer.sessionType] - timer.timeRemaining) / SESSION_DURATIONS[timer.sessionType]) * 100
         : ((5 * 60 - timer.timeRemaining) / (5 * 60)) * 100;
@@ -185,8 +211,8 @@ export default function FocusTimerWidget() {
                     <button
                         onClick={toggleTimer}
                         className={`p-4 rounded-full transition-all ${timer.isRunning
-                                ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
-                                : 'bg-primary-500 text-white hover:bg-primary-600'
+                            ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
+                            : 'bg-primary-500 text-white hover:bg-primary-600'
                             }`}
                     >
                         {timer.isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
@@ -208,8 +234,8 @@ export default function FocusTimerWidget() {
                             onClick={() => selectDuration(duration)}
                             disabled={timer.isRunning}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${timer.sessionType === duration
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-dark-700 text-dark-400 hover:bg-dark-600 disabled:opacity-50'
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-dark-700 text-dark-400 hover:bg-dark-600 disabled:opacity-50'
                                 }`}
                         >
                             {duration}m

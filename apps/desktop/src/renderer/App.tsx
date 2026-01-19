@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
 import ProductivityCoach from './components/ProductivityCoach';
+import ShortcutManager from './components/ShortcutManager';
 import OnboardingWizard from './components/OnboardingWizard';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
 import Dashboard from './pages/Dashboard';
@@ -167,6 +168,7 @@ export default function App() {
             </div>
             {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
             <ProductivityCoach />
+            <ShortcutManager />
             <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
         </div>
     );
