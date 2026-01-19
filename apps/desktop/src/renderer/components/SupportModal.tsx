@@ -24,25 +24,25 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             title: 'Video Tutorials',
             description: 'Get started with basic features and settings.',
             icon: Video,
-            action: () => console.log('Open Video Tutorials'),
+            action: () => window.open('https://www.youtube.com/@wakey_app', '_blank'),
         },
         {
             title: 'User Guide',
             description: 'Learn how to get the most out of Wakey.',
             icon: BookOpen,
-            action: () => console.log('Open User Guide'),
+            action: () => window.open('https://docs.wakey.app', '_blank'),
         },
         {
             title: 'Join Our Discord Community',
             description: 'Ask questions, report bugs, and help others.',
             icon: Users,
-            action: () => console.log('Open Discord'),
+            action: () => window.open('https://discord.gg/wakey', '_blank'),
         },
         {
             title: 'Changelog',
             description: 'View new feature releases.',
             icon: FileText,
-            action: () => console.log('Open Changelog'),
+            action: () => window.open('https://wakey.app/changelog', '_blank'),
         }
     ];
 
@@ -51,25 +51,25 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             title: 'Chat Support',
             description: 'Connect with us directly for immediate support.',
             icon: MessageCircle,
-            action: () => console.log('Open Chat Support'),
+            action: () => window.open('https://wakey.app/chat', '_blank'),
         },
         {
             title: 'Email Support',
             description: 'Get assistance with issues or questions via email.',
             icon: Mail,
-            action: () => console.log('Open Email Support'),
+            action: () => window.open('mailto:support@wakey.app', '_blank'),
         },
         {
             title: 'Bug Report',
             description: 'Report an issue or bug you encountered.',
             icon: AlertTriangle,
-            action: () => console.log('Open Bug Report'),
+            action: () => window.open('https://github.com/wakey/wakey/issues', '_blank'),
         },
         {
             title: 'Feature Request',
             description: 'Suggest a new feature or improvement.',
             icon: Lightbulb,
-            action: () => console.log('Open Feature Request'),
+            action: () => window.open('https://wakey.app/feature-requests', '_blank'),
         }
     ];
 

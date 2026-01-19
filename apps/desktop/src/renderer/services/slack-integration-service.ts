@@ -199,7 +199,7 @@ class SlackIntegrationService {
      */
     async setStatus(status: SlackStatus): Promise<boolean> {
         if (!this.isConnected()) {
-            console.log('[Demo] Would set Slack status:', status);
+            console.info('[Demo] Would set Slack status:', status);
             return true;
         }
 
@@ -360,7 +360,7 @@ class SlackIntegrationService {
         const targetChannel = channel || this.config.notifyChannel;
 
         if (!targetChannel) {
-            console.log('[Demo] Would send Slack notification:', message);
+            console.info('[Demo] Would send Slack notification:', message);
             return true;
         }
 

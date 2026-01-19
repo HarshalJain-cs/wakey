@@ -408,7 +408,7 @@ class WorkflowEngineService {
             error: null,
         };
 
-        console.log(`[Workflow] Executing: ${workflow.name}`);
+        console.info(`[Workflow] Executing: ${workflow.name}`);
 
         try {
             // Sort actions by order
@@ -442,7 +442,7 @@ class WorkflowEngineService {
     }
 
     private async executeAction(action: WorkflowAction, _context: Record<string, unknown>): Promise<void> {
-        console.log(`[Workflow] Action: ${action.type}`, action.config);
+        console.info(`[Workflow] Action: ${action.type}`, action.config);
 
         switch (action.type) {
             case 'send_notification':
@@ -454,37 +454,37 @@ class WorkflowEngineService {
 
             case 'play_sound':
                 // Would call audioService.playEffect()
-                console.log(`[Sound] Playing: ${action.config.sound}`);
+                console.info(`[Sound] Playing: ${action.config.sound}`);
                 break;
 
             case 'show_message':
                 // Would show UI message
-                console.log(`[Message] ${action.config.message}`);
+                console.info(`[Message] ${action.config.message}`);
                 break;
 
             case 'update_slack_status':
                 // Would call slackIntegrationService.setStatus()
-                console.log(`[Slack] Status: ${action.config.emoji} ${action.config.text}`);
+                console.info(`[Slack] Status: ${action.config.emoji} ${action.config.text}`);
                 break;
 
             case 'create_task':
                 // Would create a task
-                console.log(`[Task] Creating: ${action.config.title}`);
+                console.info(`[Task] Creating: ${action.config.title}`);
                 break;
 
             case 'start_focus':
                 // Would start a focus session
-                console.log(`[Focus] Starting ${action.config.duration || 25} minutes`);
+                console.info(`[Focus] Starting ${action.config.duration || 25} minutes`);
                 break;
 
             case 'start_break':
                 // Would start a break
-                console.log(`[Break] Starting ${action.config.duration || 5} minutes`);
+                console.info(`[Break] Starting ${action.config.duration || 5} minutes`);
                 break;
 
             case 'log_to_notion':
                 // Would log to Notion
-                console.log(`[Notion] Logging to database`);
+                console.info(`[Notion] Logging to database`);
                 break;
 
             case 'send_webhook':
@@ -496,7 +496,7 @@ class WorkflowEngineService {
 
             case 'run_script':
                 // Would run custom script (sandboxed)
-                console.log(`[Script] Executing custom script`);
+                console.info(`[Script] Executing custom script`);
                 break;
 
             default:
@@ -508,7 +508,7 @@ class WorkflowEngineService {
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(title, { body });
         } else {
-            console.log(`[Notification] ${title}: ${body}`);
+            console.info(`[Notification] ${title}: ${body}`);
         }
     }
 
@@ -557,7 +557,7 @@ class WorkflowEngineService {
 
     private setupTimerForWorkflow(workflow: Workflow): void {
         // Timer logic for specific workflow if needed
-        console.log(`[Workflow] Timer setup for: ${workflow.name}`);
+        console.info(`[Workflow] Timer setup for: ${workflow.name}`);
     }
 
     // ============================================
