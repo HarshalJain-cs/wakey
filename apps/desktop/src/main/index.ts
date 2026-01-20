@@ -209,13 +209,15 @@ let lastAppName: string | null = null;
 let browserWss: WebSocketServer | null = null;
 let extensionClientsConnected = 0; // Track connected extension clients
 const BROWSER_WS_PORT = 8765;
+const connectedClients: Set<WebSocket> = new Set(); // Track all connected WebSocket clients
+let pingInterval: NodeJS.Timeout | null = null; // Interval for sending pings
 
 
 /**
  * Browser activity event received from the browser extension.
  */
 interface BrowserEvent {
-    type: 'tab_activated' | 'url_changed' | 'tab_closed' | 'idle_state' | 'extension_connected';
+    type: 'tab_activated' | 'url_changed' | 'tab_closed' | 'idle_state' | 'extension_connected' | 'heartbeat';
     url?: string;
     title?: string;
     domain?: string;
@@ -307,6 +309,10 @@ function handleBrowserEvent(event: BrowserEvent): void {
         return;
     }
 
+    // Handle heartbeat silently - just keeps connection alive
+    if (event.type === 'heartbeat') {
+        return;
+    }
 
     if (!event.url || !event.domain) return;
 
@@ -394,6 +400,7 @@ function startBrowserTrackingServer(): void {
         browserWss.on('connection', (ws: WebSocket) => {
             console.log('Browser extension connected via WebSocket');
             extensionClientsConnected++;
+            connectedClients.add(ws);
 
             // Immediately notify renderer that extension is now connected
             mainWindow?.webContents.send('browser-activity', {
@@ -401,6 +408,11 @@ function startBrowserTrackingServer(): void {
                 connected: true,
                 clientCount: extensionClientsConnected,
                 timestamp: Date.now(),
+            });
+
+            // Handle pong responses (keeps connection alive)
+            ws.on('pong', () => {
+                // Client responded to ping - connection is alive
             });
 
             ws.on('message', (data: Buffer) => {
@@ -415,6 +427,7 @@ function startBrowserTrackingServer(): void {
             ws.on('close', () => {
                 console.log('Browser extension disconnected');
                 extensionClientsConnected--;
+                connectedClients.delete(ws);
                 // Notify renderer that extension disconnected
                 mainWindow?.webContents.send('browser-activity', {
                     type: 'extension_disconnected',
@@ -426,8 +439,20 @@ function startBrowserTrackingServer(): void {
 
             ws.on('error', (error) => {
                 console.error('WebSocket error:', error);
+                connectedClients.delete(ws);
             });
         });
+
+        // Start ping interval to keep connections alive (every 20 seconds)
+        if (!pingInterval) {
+            pingInterval = setInterval(() => {
+                connectedClients.forEach((client) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.ping();
+                    }
+                });
+            }, 20000);
+        }
 
 
         browserWss.on('error', (error) => {
@@ -448,6 +473,11 @@ function startBrowserTrackingServer(): void {
  * Stops the WebSocket server.
  */
 function stopBrowserTrackingServer(): void {
+    if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+    }
+    connectedClients.clear();
     if (browserWss) {
         browserWss.close();
         browserWss = null;

@@ -211,16 +211,28 @@ chrome.idle.onStateChanged.addListener((state) => {
 // Connect to Wakey on service worker startup
 connectToWakey();
 
-// Keep service worker alive by setting up an alarm
-chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
+// Keep service worker alive by setting up an alarm (minimum is 0.5 minutes in MV3)
+chrome.alarms.create('keepAlive', { periodInMinutes: 0.5 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'keepAlive') {
-        // Try to reconnect if disconnected
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
+        // Send heartbeat if connected, otherwise reconnect
+        if (ws?.readyState === WebSocket.OPEN) {
+            sendEvent({ type: 'heartbeat' });
+        } else {
             connectToWakey();
         }
     }
 });
+
+// Also use setInterval for more frequent keep-alive (every 20 seconds)
+// This helps prevent service worker suspension
+setInterval(() => {
+    if (ws?.readyState === WebSocket.OPEN) {
+        sendEvent({ type: 'heartbeat' });
+    } else {
+        connectToWakey();
+    }
+}, 20000);
 
 console.log('[Wakey] Browser extension service worker started');

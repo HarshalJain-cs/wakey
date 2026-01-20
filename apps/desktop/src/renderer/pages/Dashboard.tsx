@@ -46,8 +46,8 @@ export default function Dashboard({ isTracking }: DashboardProps) {
     const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
     const [dragOverWidget, setDragOverWidget] = useState<string | null>(null);
 
-    // Browser extension connection status
-    const [extensionConnected, setExtensionConnected] = useState(false);
+    // Browser extension connection status - use timestamp to be tolerant of brief disconnections
+    const [lastActivityTime, setLastActivityTime] = useState<number>(0);
     const [lastBrowserActivity, setLastBrowserActivity] = useState<{
         domain: string;
         title: string;
@@ -55,13 +55,25 @@ export default function Dashboard({ isTracking }: DashboardProps) {
         isDistraction: boolean;
     } | null>(null);
 
+    // Consider connected if activity received within last 60 seconds
+    const extensionConnected = Date.now() - lastActivityTime < 60000;
+
+    // Force re-render periodically to update connection status
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const interval = setInterval(() => setTick(t => t + 1), 5000);
+        return () => clearInterval(interval);
+    }, []);
+
     // Listen for browser activity events from extension
     useEffect(() => {
         if (!window.wakey) return;
 
         // Query initial extension status
         window.wakey.getExtensionStatus().then((status) => {
-            setExtensionConnected(status.connected);
+            if (status.connected) {
+                setLastActivityTime(Date.now());
+            }
         }).catch((err) => {
             console.error('Failed to get extension status:', err);
         });
@@ -69,19 +81,18 @@ export default function Dashboard({ isTracking }: DashboardProps) {
         window.wakey.onBrowserActivity((data) => {
             console.log('Browser activity received:', data);
 
+            // Any activity from extension means it's connected
+            setLastActivityTime(Date.now());
+
             // Handle connection status events
             if (data.type === 'extension_connected') {
-                setExtensionConnected(true);
                 return;
             }
 
             if (data.type === 'extension_disconnected') {
-                setExtensionConnected(data.connected ?? false);
+                // Don't immediately mark as disconnected - let the timeout handle it
                 return;
             }
-
-            // For regular browser activity, also mark as connected
-            setExtensionConnected(true);
 
             // Update browser activity details for actual tab events
             if (data.domain) {
