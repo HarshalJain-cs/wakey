@@ -21,6 +21,7 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import Store from 'electron-store';
 import { WebSocketServer, WebSocket } from 'ws';
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 
 // ============================================
 // Type Definitions
@@ -545,6 +546,22 @@ function getToday(): string {
     return new Date().toISOString().split('T')[0];
 }
 
+function cleanupOldActivities(): void {
+    const activities = store.get('activities', []);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const filteredActivities = activities.filter(activity => {
+        const activityDate = new Date(activity.created_at);
+        return activityDate >= thirtyDaysAgo;
+    });
+
+    if (filteredActivities.length !== activities.length) {
+        store.set('activities', filteredActivities);
+        console.log(`Cleaned up ${activities.length - filteredActivities.length} old activities`);
+    }
+}
+
 
 
 // ============================================
@@ -780,7 +797,28 @@ function createWindow(): void {
             sandbox: false,
             contextIsolation: true,
             nodeIntegration: false,
+            webSecurity: true,
         },
+    });
+
+    // Implement Content Security Policy
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+            responseHeaders: {
+                ...details.responseHeaders,
+                'Content-Security-Policy': [
+                    "default-src 'self'; " +
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+                    "font-src 'self' https://fonts.gstatic.com; " +
+                    "img-src 'self' data: https:; " +
+                    "connect-src 'self' https://api.groq.com https://api.openai.com https://*.supabase.co wss://*.supabase.co; " +
+                    "object-src 'none'; " +
+                    "base-uri 'self'; " +
+                    "form-action 'self';"
+                ]
+            }
+        });
     });
 
     mainWindow.on('ready-to-show', () => mainWindow?.show());
@@ -838,6 +876,32 @@ function registerShortcuts(): void {
             mainWindow?.focus();
         }
     });
+}
+
+// Secure API key storage utilities
+const ENCRYPTION_KEY = scryptSync('wakey-secure-api-keys', 'salt', 32);
+const ALGORITHM = 'aes-256-gcm';
+
+function encrypt(text: string): string {
+    const iv = randomBytes(16);
+    const cipher = createCipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag();
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+}
+
+function decrypt(encryptedText: string): string {
+    const parts = encryptedText.split(':');
+    if (parts.length !== 3) throw new Error('Invalid encrypted data');
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encrypted = parts[2];
+    const decipher = createDecipheriv(ALGORITHM, ENCRYPTION_KEY, iv);
+    decipher.setAuthTag(authTag);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
 }
 
 function setupIpcHandlers(): void {
@@ -914,6 +978,34 @@ function setupIpcHandlers(): void {
         app.quit();
     });
 
+    // Secure API key storage handlers
+    ipcMain.handle('get-secure-api-keys', () => {
+        const encryptedKeys = store.get('secureApiKeys', {}) as Record<string, string>;
+        const decryptedKeys: Record<string, string> = {};
+        for (const [key, encrypted] of Object.entries(encryptedKeys)) {
+            try {
+                decryptedKeys[key] = decrypt(encrypted);
+            } catch (error) {
+                console.error(`Failed to decrypt API key for ${key}:`, error);
+            }
+        }
+        return decryptedKeys;
+    });
+
+    ipcMain.handle('set-secure-api-key', (_e, key: string, value: string) => {
+        const encryptedKeys = store.get('secureApiKeys', {}) as Record<string, string>;
+        encryptedKeys[key] = encrypt(value);
+        store.set('secureApiKeys', encryptedKeys);
+        return true;
+    });
+
+    ipcMain.handle('delete-secure-api-key', (_e, key: string) => {
+        const encryptedKeys = store.get('secureApiKeys', {}) as Record<string, string>;
+        delete encryptedKeys[key];
+        store.set('secureApiKeys', encryptedKeys);
+        return true;
+    });
+
 }
 
 app.whenReady().then(() => {
@@ -926,6 +1018,11 @@ app.whenReady().then(() => {
     registerShortcuts();
     setupIpcHandlers();
 
+    // Clean up old activities on startup
+    cleanupOldActivities();
+
+    // Clean up old activities daily
+    setInterval(cleanupOldActivities, 24 * 60 * 60 * 1000);
 
     if (store.get('settings.autoStartTracking')) startTracking();
 

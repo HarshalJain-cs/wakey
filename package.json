@@ -26,6 +26,7 @@
     "pnpm": ">=8.0.0"
   },
   "dependencies": {
-    "electron": "28.1.0"
+    "electron": "28.1.0",
+    "screenshot-desktop": "^1.15.3"
   }
 }

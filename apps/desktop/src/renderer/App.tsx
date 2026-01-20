@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import TitleBar from './components/TitleBar';
 import Sidebar from './components/Sidebar';
 import ProductivityCoach from './components/ProductivityCoach';
@@ -7,27 +8,28 @@ import ShortcutManager from './components/ShortcutManager';
 import OnboardingWizard from './components/OnboardingWizard';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
 import SupportModal from './components/SupportModal';
-import Dashboard from './pages/Dashboard';
-import FocusPage from './pages/FocusPage';
-import TasksPage from './pages/TasksPage';
-import ProjectsPage from './pages/ProjectsPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import IntegrationsPage from './pages/IntegrationsPage';
-import TraderDashboard from './pages/TraderDashboard';
-import DeveloperDashboard from './pages/DeveloperDashboard';
-import SettingsPage from './pages/SettingsPage';
-import AIConsensusPage from './pages/AIConsensusPage';
-import KnowledgePage from './pages/KnowledgePage';
-import AgentsPage from './pages/AgentsPage';
-import FlashcardsPage from './pages/FlashcardsPage';
-import ResearchPage from './pages/ResearchPage';
-import CloudSyncPage from './pages/CloudSyncPage';
-import AchievementsPage from './pages/AchievementsPage';
-import AuthPage from './pages/AuthPage';
-import GoalsPage from './pages/GoalsPage';
-import MusicPage from './pages/MusicPage';
-import ShortcutsPage from './pages/ShortcutsPage';
-import WorkflowsPage from './pages/WorkflowsPage';
+// Lazy load pages for better performance
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const FocusPage = lazy(() => import('./pages/FocusPage'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const IntegrationsPage = lazy(() => import('./pages/IntegrationsPage'));
+const TraderDashboard = lazy(() => import('./pages/TraderDashboard'));
+const DeveloperDashboard = lazy(() => import('./pages/DeveloperDashboard'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const AIConsensusPage = lazy(() => import('./pages/AIConsensusPage'));
+const KnowledgePage = lazy(() => import('./pages/KnowledgePage'));
+const AgentsPage = lazy(() => import('./pages/AgentsPage'));
+const FlashcardsPage = lazy(() => import('./pages/FlashcardsPage'));
+const ResearchPage = lazy(() => import('./pages/ResearchPage'));
+const CloudSyncPage = lazy(() => import('./pages/CloudSyncPage'));
+const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const MusicPage = lazy(() => import('./pages/MusicPage'));
+const ShortcutsPage = lazy(() => import('./pages/ShortcutsPage'));
+const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'));
 // EyeBreakReminder is now handled by ProductivityCoach/WorkBreakReminder
 import * as supabaseAuth from './services/supabase-auth';
 
@@ -144,28 +146,37 @@ export default function App() {
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} onSupportClick={() => setShowSupportModal(true)} />
                 <main className="flex-1 overflow-auto bg-dark-900 p-6">
-                    <Routes>
-                        <Route path="/" element={<Dashboard isTracking={isTracking} />} />
-                        <Route path="/focus" element={<FocusPage />} />
-                        <Route path="/tasks" element={<TasksPage />} />
-                        <Route path="/projects" element={<ProjectsPage />} />
-                        <Route path="/analytics" element={<AnalyticsPage />} />
-                        <Route path="/research" element={<ResearchPage />} />
-                        <Route path="/integrations" element={<IntegrationsPage />} />
-                        <Route path="/trader" element={<TraderDashboard />} />
-                        <Route path="/developer" element={<DeveloperDashboard />} />
-                        <Route path="/ai-consensus" element={<AIConsensusPage />} />
-                        <Route path="/knowledge" element={<KnowledgePage />} />
-                        <Route path="/agents" element={<AgentsPage />} />
-                        <Route path="/flashcards" element={<FlashcardsPage />} />
-                        <Route path="/cloud-sync" element={<CloudSyncPage />} />
-                        <Route path="/achievements" element={<AchievementsPage />} />
-                        <Route path="/goals" element={<GoalsPage />} />
-                        <Route path="/music" element={<MusicPage />} />
-                        <Route path="/shortcuts" element={<ShortcutsPage />} />
-                        <Route path="/workflows" element={<WorkflowsPage />} />
-                        <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
-                    </Routes>
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center h-full">
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                                <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+                            </div>
+                        </div>
+                    }>
+                        <Routes>
+                            <Route path="/" element={<Dashboard isTracking={isTracking} />} />
+                            <Route path="/focus" element={<FocusPage />} />
+                            <Route path="/tasks" element={<TasksPage />} />
+                            <Route path="/projects" element={<ProjectsPage />} />
+                            <Route path="/analytics" element={<AnalyticsPage />} />
+                            <Route path="/research" element={<ResearchPage />} />
+                            <Route path="/integrations" element={<IntegrationsPage />} />
+                            <Route path="/trader" element={<TraderDashboard />} />
+                            <Route path="/developer" element={<DeveloperDashboard />} />
+                            <Route path="/ai-consensus" element={<AIConsensusPage />} />
+                            <Route path="/knowledge" element={<KnowledgePage />} />
+                            <Route path="/agents" element={<AgentsPage />} />
+                            <Route path="/flashcards" element={<FlashcardsPage />} />
+                            <Route path="/cloud-sync" element={<CloudSyncPage />} />
+                            <Route path="/achievements" element={<AchievementsPage />} />
+                            <Route path="/goals" element={<GoalsPage />} />
+                            <Route path="/music" element={<MusicPage />} />
+                            <Route path="/shortcuts" element={<ShortcutsPage />} />
+                            <Route path="/workflows" element={<WorkflowsPage />} />
+                            <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
+                        </Routes>
+                    </Suspense>
                 </main>
             </div>
             {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}

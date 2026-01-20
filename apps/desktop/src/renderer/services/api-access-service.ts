@@ -149,28 +149,51 @@ class APIAccessService {
     private apiKeys: APIKey[] = [];
     private webhooks: Webhook[] = [];
     private requestLog: APIRequest[] = [];
+    private rateLimitMap: Map<string, { count: number; resetTime: number }> = new Map();
 
     constructor() {
         this.loadFromStorage();
     }
 
-    private loadFromStorage(): void {
+    private async loadFromStorage(): Promise<void> {
         try {
-            const stored = localStorage.getItem('wakey_api');
+            const stored = localStorage.getItem('wakey_api_metadata');
             if (stored) {
                 const data = JSON.parse(stored);
-                this.apiKeys = data.apiKeys || [];
                 this.webhooks = data.webhooks || [];
                 this.requestLog = data.requestLog || [];
+
+                // Load API keys securely
+                const secureKeys = await window.wakey.getSecureApiKeys();
+                this.apiKeys = data.apiKeys?.map((key: any) => ({
+                    ...key,
+                    key: secureKeys[key.id] || key.key, // Fallback to stored key if secure load fails
+                })) || [];
             }
         } catch (error) {
             console.error('Failed to load API config:', error);
         }
     }
 
-    private saveToStorage(): void {
-        localStorage.setItem('wakey_api', JSON.stringify({
-            apiKeys: this.apiKeys,
+    private async saveToStorage(): Promise<void> {
+        // Save API keys securely
+        for (const apiKey of this.apiKeys) {
+            await window.wakey.setSecureApiKey(apiKey.id, apiKey.key);
+        }
+
+        // Save metadata (without actual keys)
+        const metadataKeys = this.apiKeys.map(k => ({
+            id: k.id,
+            name: k.name,
+            permissions: k.permissions,
+            createdAt: k.createdAt,
+            lastUsed: k.lastUsed,
+            enabled: k.enabled,
+            rateLimit: k.rateLimit,
+        }));
+
+        localStorage.setItem('wakey_api_metadata', JSON.stringify({
+            apiKeys: metadataKeys,
             webhooks: this.webhooks,
             requestLog: this.requestLog.slice(-1000), // Keep last 1000 requests
         }));
@@ -185,10 +208,62 @@ class APIAccessService {
         return key;
     }
 
+    private validateInput(input: string, fieldName: string, maxLength: number = 100): void {
+        if (!input || typeof input !== 'string') {
+            throw new Error(`${fieldName} is required and must be a string`);
+        }
+        if (input.length > maxLength) {
+            throw new Error(`${fieldName} must be less than ${maxLength} characters`);
+        }
+        // Basic XSS prevention
+        if (/<script|javascript:|data:/i.test(input)) {
+            throw new Error(`${fieldName} contains potentially malicious content`);
+        }
+    }
+
+    private checkRateLimit(apiKey: APIKey): boolean {
+        const now = Date.now();
+        const key = apiKey.id;
+        const limit = apiKey.rateLimit;
+        const windowMs = 60000; // 1 minute
+
+        const current = this.rateLimitMap.get(key);
+        if (!current || now > current.resetTime) {
+            // Reset window
+            this.rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+            return true;
+        }
+
+        if (current.count >= limit) {
+            return false; // Rate limit exceeded
+        }
+
+        current.count++;
+        return true;
+    }
+
     /**
      * Create a new API key
      */
-    createAPIKey(name: string, permissions: APIPermission[]): APIKey {
+    async createAPIKey(name: string, permissions: APIPermission[]): Promise<APIKey> {
+        this.validateInput(name, 'API key name', 50);
+
+        if (!permissions || !Array.isArray(permissions) || permissions.length === 0) {
+            throw new Error('At least one permission is required');
+        }
+
+        // Validate permissions
+        const validPermissions: APIPermission[] = [
+            'read:stats', 'read:goals', 'write:goals', 'read:tasks',
+            'write:tasks', 'read:sessions', 'trigger:focus', 'trigger:break',
+            'webhooks'
+        ];
+        for (const perm of permissions) {
+            if (!validPermissions.includes(perm)) {
+                throw new Error(`Invalid permission: ${perm}`);
+            }
+        }
+
         const apiKey: APIKey = {
             id: `key_${Date.now()}`,
             name,
@@ -201,7 +276,7 @@ class APIAccessService {
         };
 
         this.apiKeys.push(apiKey);
-        this.saveToStorage();
+        await this.saveToStorage();
         return apiKey;
     }
 
@@ -218,30 +293,40 @@ class APIAccessService {
     /**
      * Revoke API key
      */
-    revokeAPIKey(keyId: string): void {
+    async revokeAPIKey(keyId: string): Promise<void> {
         const key = this.apiKeys.find(k => k.id === keyId);
         if (key) {
             key.enabled = false;
-            this.saveToStorage();
+            await this.saveToStorage();
         }
     }
 
     /**
      * Delete API key
      */
-    deleteAPIKey(keyId: string): void {
+    async deleteAPIKey(keyId: string): Promise<void> {
         this.apiKeys = this.apiKeys.filter(k => k.id !== keyId);
-        this.saveToStorage();
+        await window.wakey.deleteSecureApiKey(keyId);
+        await this.saveToStorage();
     }
 
     /**
      * Validate API key
      */
-    validateKey(key: string): APIKey | null {
+    async validateKey(key: string): Promise<APIKey | null> {
+        if (!key || typeof key !== 'string' || key.length < 10) {
+            return null; // Basic validation
+        }
+
         const apiKey = this.apiKeys.find(k => k.key === key && k.enabled);
         if (apiKey) {
+            // Check rate limit
+            if (!this.checkRateLimit(apiKey)) {
+                throw new Error('Rate limit exceeded');
+            }
+
             apiKey.lastUsed = new Date();
-            this.saveToStorage();
+            await this.saveToStorage();
             return apiKey;
         }
         return null;
@@ -250,15 +335,15 @@ class APIAccessService {
     /**
      * Check permission
      */
-    hasPermission(key: string, permission: APIPermission): boolean {
-        const apiKey = this.validateKey(key);
+    async hasPermission(key: string, permission: APIPermission): Promise<boolean> {
+        const apiKey = await this.validateKey(key);
         return apiKey?.permissions.includes(permission) || false;
     }
 
     /**
      * Create webhook
      */
-    createWebhook(name: string, url: string, events: WebhookEvent[]): Webhook {
+    async createWebhook(name: string, url: string, events: WebhookEvent[]): Promise<Webhook> {
         const webhook: Webhook = {
             id: `wh_${Date.now()}`,
             name,
@@ -272,7 +357,7 @@ class APIAccessService {
         };
 
         this.webhooks.push(webhook);
-        this.saveToStorage();
+        await this.saveToStorage();
         return webhook;
     }
 
@@ -286,19 +371,19 @@ class APIAccessService {
     /**
      * Delete webhook
      */
-    deleteWebhook(webhookId: string): void {
+    async deleteWebhook(webhookId: string): Promise<void> {
         this.webhooks = this.webhooks.filter(w => w.id !== webhookId);
-        this.saveToStorage();
+        await this.saveToStorage();
     }
 
     /**
      * Toggle webhook
      */
-    toggleWebhook(webhookId: string, enabled: boolean): void {
+    async toggleWebhook(webhookId: string, enabled: boolean): Promise<void> {
         const webhook = this.webhooks.find(w => w.id === webhookId);
         if (webhook) {
             webhook.enabled = enabled;
-            this.saveToStorage();
+            await this.saveToStorage();
         }
     }
 
@@ -328,13 +413,13 @@ class APIAccessService {
             }
         }
 
-        this.saveToStorage();
+        await this.saveToStorage();
     }
 
     /**
      * Log API request
      */
-    logRequest(apiKeyId: string, endpoint: string, method: string, status: number, responseTime: number): void {
+    async logRequest(apiKeyId: string, endpoint: string, method: string, status: number, responseTime: number): Promise<void> {
         this.requestLog.push({
             id: `req_${Date.now()}`,
             apiKeyId,
@@ -345,7 +430,7 @@ class APIAccessService {
             responseTime,
         });
 
-        this.saveToStorage();
+        await this.saveToStorage();
     }
 
     /**

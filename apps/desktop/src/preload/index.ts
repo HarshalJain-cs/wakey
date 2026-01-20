@@ -86,6 +86,11 @@ contextBridge.exposeInMainWorld('wakey', {
         ipcRenderer.on('update-status', (_event, status) => callback(status));
     },
 
+    // Secure API key storage
+    getSecureApiKeys: () => ipcRenderer.invoke('get-secure-api-keys'),
+    setSecureApiKey: (key: string, value: string) => ipcRenderer.invoke('set-secure-api-key', key, value),
+    deleteSecureApiKey: (key: string) => ipcRenderer.invoke('delete-secure-api-key', key),
+
     // Remove listeners
     removeAllListeners: (channel: string) => {
         ipcRenderer.removeAllListeners(channel);
@@ -138,8 +143,11 @@ declare global {
             getAppVersion: () => Promise<string>;
             getUpdateConfig: () => Promise<{ autoDownload: boolean; autoInstallOnAppQuit: boolean; allowPrerelease: boolean; checkInterval: number }>;
             setUpdateConfig: (config: { autoDownload?: boolean; autoInstallOnAppQuit?: boolean; allowPrerelease?: boolean; checkInterval?: number }) => Promise<any>;
-            onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; error?: string }) => void) => void;
-            removeAllListeners: (channel: string) => void;
+             onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; error?: string }) => void) => void;
+             getSecureApiKeys: () => Promise<Record<string, string>>;
+             setSecureApiKey: (key: string, value: string) => Promise<boolean>;
+             deleteSecureApiKey: (key: string) => Promise<boolean>;
+             removeAllListeners: (channel: string) => void;
         };
     }
 }
