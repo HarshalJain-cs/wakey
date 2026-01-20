@@ -46,9 +46,64 @@ export default function Dashboard({ isTracking }: DashboardProps) {
     const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
     const [dragOverWidget, setDragOverWidget] = useState<string | null>(null);
 
+    // Browser extension connection status
+    const [extensionConnected, setExtensionConnected] = useState(false);
+    const [lastBrowserActivity, setLastBrowserActivity] = useState<{
+        domain: string;
+        title: string;
+        category: string;
+        isDistraction: boolean;
+    } | null>(null);
+
+    // Listen for browser activity events from extension
+    useEffect(() => {
+        if (!window.wakey) return;
+
+        // Query initial extension status
+        window.wakey.getExtensionStatus().then((status) => {
+            setExtensionConnected(status.connected);
+        }).catch((err) => {
+            console.error('Failed to get extension status:', err);
+        });
+
+        window.wakey.onBrowserActivity((data) => {
+            console.log('Browser activity received:', data);
+
+            // Handle connection status events
+            if (data.type === 'extension_connected') {
+                setExtensionConnected(true);
+                return;
+            }
+
+            if (data.type === 'extension_disconnected') {
+                setExtensionConnected(data.connected ?? false);
+                return;
+            }
+
+            // For regular browser activity, also mark as connected
+            setExtensionConnected(true);
+
+            // Update browser activity details for actual tab events
+            if (data.domain) {
+                setLastBrowserActivity({
+                    domain: data.domain || 'Unknown',
+                    title: data.title || '',
+                    category: data.category || 'Browser',
+                    isDistraction: data.isDistraction || false,
+                });
+            }
+        });
+
+        return () => {
+            window.wakey.removeAllListeners('browser-activity');
+        };
+    }, []);
+
+
     // Load saved layout
     useEffect(() => {
         const loadLayout = async () => {
+
             if (!window.wakey) return;
             try {
                 const settings = await window.wakey.getSettings();
@@ -164,8 +219,8 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                     <button
                         onClick={() => setEditMode(!editMode)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${editMode
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-dark-700 text-dark-400 hover:text-white'
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-dark-700 text-dark-400 hover:text-white'
                             }`}
                     >
                         <Settings className="w-4 h-4" />
@@ -183,8 +238,24 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                             {isTracking ? 'Tracking Active' : 'Tracking Paused'}
                         </span>
                     </div>
+
+                    {/* Browser Extension Status */}
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${extensionConnected
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-dark-700 text-dark-500'
+                        }`}
+                        title={lastBrowserActivity ? `${lastBrowserActivity.domain} - ${lastBrowserActivity.category}` : 'Browser extension not connected'}
+                    >
+                        <span className={`w-2 h-2 rounded-full ${extensionConnected ? 'bg-blue-400' : 'bg-dark-600'}`} />
+                        <span className="text-sm font-medium">
+                            {extensionConnected
+                                ? (lastBrowserActivity?.domain || 'Extension Connected')
+                                : 'Extension Offline'}
+                        </span>
+                    </div>
                 </div>
             </div>
+
 
             {/* Edit Mode Panel */}
             {editMode && (
@@ -209,8 +280,8 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                                 key={widget.id}
                                 onClick={() => toggleWidgetVisibility(widget.id)}
                                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${widget.visible
-                                        ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
-                                        : 'bg-dark-700 text-dark-500 border border-dark-600'
+                                    ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                    : 'bg-dark-700 text-dark-500 border border-dark-600'
                                     }`}
                             >
                                 {widget.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}

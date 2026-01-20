@@ -207,7 +207,9 @@ let lastAppName: string | null = null;
 // ============================================
 
 let browserWss: WebSocketServer | null = null;
+let extensionClientsConnected = 0; // Track connected extension clients
 const BROWSER_WS_PORT = 8765;
+
 
 /**
  * Browser activity event received from the browser extension.
@@ -290,6 +292,13 @@ function categorizeDomain(domain: string): { category: string; isDistraction: bo
 function handleBrowserEvent(event: BrowserEvent): void {
     if (event.type === 'extension_connected') {
         console.log(`Browser extension connected: ${event.browser}`);
+        // Notify renderer that extension is connected
+        mainWindow?.webContents.send('browser-activity', {
+            type: 'extension_connected',
+            browser: event.browser,
+            connected: true,
+            timestamp: event.timestamp,
+        });
         return;
     }
 
@@ -297,6 +306,7 @@ function handleBrowserEvent(event: BrowserEvent): void {
         console.log(`Browser idle state: ${event.state}`);
         return;
     }
+
 
     if (!event.url || !event.domain) return;
 
@@ -383,6 +393,15 @@ function startBrowserTrackingServer(): void {
 
         browserWss.on('connection', (ws: WebSocket) => {
             console.log('Browser extension connected via WebSocket');
+            extensionClientsConnected++;
+
+            // Immediately notify renderer that extension is now connected
+            mainWindow?.webContents.send('browser-activity', {
+                type: 'extension_connected',
+                connected: true,
+                clientCount: extensionClientsConnected,
+                timestamp: Date.now(),
+            });
 
             ws.on('message', (data: Buffer) => {
                 try {
@@ -395,12 +414,21 @@ function startBrowserTrackingServer(): void {
 
             ws.on('close', () => {
                 console.log('Browser extension disconnected');
+                extensionClientsConnected--;
+                // Notify renderer that extension disconnected
+                mainWindow?.webContents.send('browser-activity', {
+                    type: 'extension_disconnected',
+                    connected: extensionClientsConnected > 0,
+                    clientCount: extensionClientsConnected,
+                    timestamp: Date.now(),
+                });
             });
 
             ws.on('error', (error) => {
                 console.error('WebSocket error:', error);
             });
         });
+
 
         browserWss.on('error', (error) => {
             console.error('WebSocket server error:', error);
@@ -811,6 +839,12 @@ function setupIpcHandlers(): void {
     ipcMain.handle('create-task', (_e, title: string, priority: string) => createTask(title, priority));
     ipcMain.handle('update-task-status', (_e, id: number, status: string) => updateTaskStatus(id, status));
     ipcMain.handle('delete-task', (_e, id: number) => deleteTask(id));
+
+    // Extension status handler
+    ipcMain.handle('get-extension-status', () => ({
+        connected: extensionClientsConnected > 0,
+        clientCount: extensionClientsConnected,
+    }));
 
     // Phase 5: Knowledge Management handlers
     ipcMain.handle('get-notes', () => store.get('notes', []));

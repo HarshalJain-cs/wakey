@@ -44,6 +44,9 @@ contextBridge.exposeInMainWorld('wakey', {
     getAgentTasks: () => ipcRenderer.invoke('get-agent-tasks'),
     saveAgentTasks: (tasks: any[]) => ipcRenderer.invoke('save-agent-tasks', tasks),
 
+    // Extension status
+    getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
+
     // Event listeners
     onTrackingToggle: (callback: (status: boolean) => void) => {
         ipcRenderer.on('tracking-toggle', (_event, status) => callback(status));
@@ -117,6 +120,7 @@ declare global {
             saveFlashcards: (cards: any[]) => Promise<boolean>;
             getAgentTasks: () => Promise<any[]>;
             saveAgentTasks: (tasks: any[]) => Promise<boolean>;
+            getExtensionStatus: () => Promise<{ connected: boolean; clientCount: number }>;
             onTrackingToggle: (callback: (status: boolean) => void) => void;
             onFocusStart: (callback: () => void) => void;
             onNavigate: (callback: (route: string) => void) => void;
