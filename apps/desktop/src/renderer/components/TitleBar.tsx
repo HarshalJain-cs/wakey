@@ -10,7 +10,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
     const handleClose = () => window.wakey?.close();
 
     return (
-        <div className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800">
+        <div className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800" style={{ webkitAppRegion: 'drag' } as React.CSSProperties}>
             {/* App title */}
             <div className="flex items-center gap-2">
                 <span className="text-primary-500 font-bold text-lg">⚡</span>
@@ -19,7 +19,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
             </div>
 
             {/* Window controls */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" style={{ webkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <button
                     onClick={handleMinimize}
                     className="p-2 rounded hover:bg-dark-700 transition-colors"
