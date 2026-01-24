@@ -47,6 +47,12 @@ contextBridge.exposeInMainWorld('wakey', {
     // Extension status
     getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
 
+    // Analytics - real data from store
+    getActivitiesRange: (startDate: string, endDate: string) =>
+        ipcRenderer.invoke('get-activities-range', startDate, endDate),
+    getStatsRange: (startDate: string, endDate: string) =>
+        ipcRenderer.invoke('get-stats-range', startDate, endDate),
+
     // Event listeners
     onTrackingToggle: (callback: (status: boolean) => void) => {
         ipcRenderer.on('tracking-toggle', (_event, status) => callback(status));
@@ -97,6 +103,15 @@ contextBridge.exposeInMainWorld('wakey', {
     },
 });
 
+// Validate that the API is properly exposed
+console.log('Wakey preload loaded successfully. API methods available:', {
+    minimize: typeof window.wakey?.minimize,
+    maximize: typeof window.wakey?.maximize,
+    close: typeof window.wakey?.close,
+    getSettings: typeof window.wakey?.getSettings,
+    setTrackingStatus: typeof window.wakey?.setTrackingStatus
+});
+
 // TypeScript declarations
 declare global {
     interface Window {
@@ -126,6 +141,14 @@ declare global {
             getAgentTasks: () => Promise<any[]>;
             saveAgentTasks: (tasks: any[]) => Promise<boolean>;
             getExtensionStatus: () => Promise<{ connected: boolean; clientCount: number }>;
+            getActivitiesRange: (startDate: string, endDate: string) => Promise<any[]>;
+            getStatsRange: (startDate: string, endDate: string) => Promise<{
+                date: string;
+                focusMinutes: number;
+                distractions: number;
+                sessions: number;
+                topApps: Record<string, number>;
+            }[]>;
             onTrackingToggle: (callback: (status: boolean) => void) => void;
             onFocusStart: (callback: () => void) => void;
             onNavigate: (callback: (route: string) => void) => void;

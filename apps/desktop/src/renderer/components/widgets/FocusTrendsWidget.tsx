@@ -11,14 +11,77 @@ export default function FocusTrendsWidget({ className = '' }: FocusTrendsWidgetP
     const [weekSummary, setWeekSummary] = useState<ReturnType<typeof focusTrendsService.getWeeklySummary> | null>(null);
 
     useEffect(() => {
-        // Generate sample data if none exists
-        const existingData = focusTrendsService.getDailyStats(7);
-        if (existingData.length === 0) {
-            focusTrendsService.generateSampleData();
-        }
+        // Load real data from store via IPC
+        const loadRealData = async () => {
+            if (!window.wakey) {
+                // Fallback to local service if wakey API not available
+                const existingData = focusTrendsService.getDailyStats(7);
+                setTrendData(existingData);
+                setWeekSummary(focusTrendsService.getWeeklySummary());
+                return;
+            }
 
-        setTrendData(focusTrendsService.getDailyStats(7));
-        setWeekSummary(focusTrendsService.getWeeklySummary());
+            try {
+                const today = new Date();
+                const startDate = new Date(today);
+                startDate.setDate(today.getDate() - 6);
+
+                const startStr = startDate.toISOString().split('T')[0];
+                const endStr = today.toISOString().split('T')[0];
+
+                // Fetch real data from the store
+                const rangeStats = await window.wakey.getStatsRange(startStr, endStr);
+
+                // Convert to DailyStats format
+                const realData: DailyStats[] = [];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+
+                    const dayData = rangeStats.find((s: { date: string }) => s.date === dateStr);
+
+                    // Calculate focus score from real metrics
+                    const focusMinutes = dayData?.focusMinutes || 0;
+                    const distractions = dayData?.distractions || 0;
+                    const sessions = dayData?.sessions || 0;
+
+                    // Focus score calculation: base 50, +1 per 6 min focus, -5 per distraction, capped 0-100
+                    const baseScore = Math.min(100, 50 + Math.floor(focusMinutes / 6));
+                    const focusScore = Math.max(0, Math.min(100, baseScore - (distractions * 5)));
+
+                    realData.push({
+                        date: dateStr,
+                        focusScore,
+                        focusMinutes,
+                        distractionMinutes: distractions * 5, // Estimate 5 min per distraction
+                        deepWorkSessions: sessions,
+                        contextSwitches: Math.floor(distractions * 1.5),
+                        breaksTaken: Math.floor(sessions * 0.8),
+                    });
+
+                    // Also record in local service for persistence
+                    focusTrendsService.recordDailyStats({
+                        focusScore,
+                        focusMinutes,
+                        distractionMinutes: distractions * 5,
+                        deepWorkSessions: sessions,
+                        contextSwitches: Math.floor(distractions * 1.5),
+                        breaksTaken: Math.floor(sessions * 0.8),
+                    });
+                }
+
+                setTrendData(realData);
+                setWeekSummary(focusTrendsService.getWeeklySummary());
+            } catch (error) {
+                console.error('Failed to load focus trends:', error);
+                // Fallback to local service
+                setTrendData(focusTrendsService.getDailyStats(7));
+                setWeekSummary(focusTrendsService.getWeeklySummary());
+            }
+        };
+
+        loadRealData();
     }, []);
 
     const maxScore = Math.max(...trendData.map(d => d.focusScore), 100);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import TitleBar from './components/TitleBar';
@@ -32,6 +32,7 @@ const ShortcutsPage = lazy(() => import('./pages/ShortcutsPage'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'));
 // EyeBreakReminder is now handled by ProductivityCoach/WorkBreakReminder
 import * as supabaseAuth from './services/supabase-auth';
+import { focusTrendsService } from './services/focus-trends-service';
 
 export default function App() {
     const [isTracking, setIsTracking] = useState(false);
@@ -54,6 +55,50 @@ export default function App() {
             return;
         }
 
+        // Helper function to initialize real data analysis
+        const loadRealAnalysisData = async () => {
+            try {
+                console.log('Initializing real data analysis...');
+                const today = new Date();
+                const weekAgo = new Date(today);
+                weekAgo.setDate(today.getDate() - 6);
+
+                const startStr = weekAgo.toISOString().split('T')[0];
+                const endStr = today.toISOString().split('T')[0];
+
+                const rangeStats = await window.wakey.getStatsRange(startStr, endStr);
+
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+
+                    const dayData = rangeStats.find((s: { date: string }) => s.date === dateStr);
+
+                    if (dayData) {
+                        const focusMinutes = dayData.focusMinutes || 0;
+                        const distractions = dayData.distractions || 0;
+                        const sessions = dayData.sessions || 0;
+
+                        const baseScore = Math.min(100, 50 + Math.floor(focusMinutes / 6));
+                        const focusScore = Math.max(0, Math.min(100, baseScore - (distractions * 5)));
+
+                        focusTrendsService.recordDailyStats({
+                            focusScore,
+                            focusMinutes,
+                            distractionMinutes: distractions * 5,
+                            deepWorkSessions: sessions,
+                            contextSwitches: Math.floor(distractions * 1.5),
+                            breaksTaken: Math.floor(sessions * 0.8),
+                        });
+                    }
+                }
+                console.log('Real data analysis initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize real analysis:', error);
+            }
+        };
+
         // Initialize authentication
         const initAuth = async () => {
             try {
@@ -65,8 +110,14 @@ export default function App() {
                 if (authRequired && settings.supabaseUrl && settings.supabaseAnonKey) {
                     const authenticated = await supabaseAuth.initSupabase();
                     setIsAuthenticated(authenticated);
+                    // If already authenticated, initialize real analysis
+                    if (authenticated) {
+                        loadRealAnalysisData();
+                    }
                 } else if (!authRequired) {
                     setIsAuthenticated(true);
+                    // Initialize real analysis when auth is not required
+                    loadRealAnalysisData();
                 }
             } catch (error) {
                 console.error('Auth init failed:', error);
@@ -82,6 +133,10 @@ export default function App() {
         // Subscribe to auth state changes
         const unsubscribe = supabaseAuth.subscribe((state) => {
             setIsAuthenticated(!!state.user);
+            // Also load real analysis when auth state changes to authenticated
+            if (state.user) {
+                loadRealAnalysisData();
+            }
         });
 
         // Setup wakey event listeners (only if wakey is available)
@@ -115,6 +170,62 @@ export default function App() {
         document.documentElement.classList.toggle('dark', newMode);
     };
 
+    // Handle successful authentication from AuthPage
+    const handleAuthSuccess = useCallback(async () => {
+        setIsAuthenticated(true);
+
+        // Initialize real data analysis after authentication
+        if (!window.wakey) return;
+
+        try {
+            console.log('Auth success - initializing real data analysis...');
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(today.getDate() - 6);
+
+            const startStr = weekAgo.toISOString().split('T')[0];
+            const endStr = today.toISOString().split('T')[0];
+
+            const rangeStats = await window.wakey.getStatsRange(startStr, endStr);
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                const dayData = rangeStats.find((s: { date: string }) => s.date === dateStr);
+
+                if (dayData) {
+                    const focusMinutes = dayData.focusMinutes || 0;
+                    const distractions = dayData.distractions || 0;
+                    const sessions = dayData.sessions || 0;
+
+                    const baseScore = Math.min(100, 50 + Math.floor(focusMinutes / 6));
+                    const focusScore = Math.max(0, Math.min(100, baseScore - (distractions * 5)));
+
+                    focusTrendsService.recordDailyStats({
+                        focusScore,
+                        focusMinutes,
+                        distractionMinutes: distractions * 5,
+                        deepWorkSessions: sessions,
+                        contextSwitches: Math.floor(distractions * 1.5),
+                        breaksTaken: Math.floor(sessions * 0.8),
+                    });
+                }
+            }
+
+            // Auto-start tracking if enabled
+            const settings = await window.wakey.getSettings();
+            if (settings.autoStartTracking && !isTracking) {
+                await window.wakey.setTrackingStatus(true);
+            }
+
+            console.log('Auth success - real data analysis initialized');
+        } catch (error) {
+            console.error('Failed to initialize real analysis after auth:', error);
+        }
+    }, [isTracking]);
+
     // Show loading spinner while checking auth
     if (authLoading) {
         return (
@@ -135,7 +246,7 @@ export default function App() {
         return (
             <div className={`h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
                 <TitleBar darkMode={darkMode} />
-                <AuthPage onAuthSuccess={() => setIsAuthenticated(true)} />
+                <AuthPage onAuthSuccess={handleAuthSuccess} />
             </div>
         );
     }

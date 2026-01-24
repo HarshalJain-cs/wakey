@@ -391,12 +391,29 @@ function handleBrowserEvent(event: BrowserEvent): void {
 
 /**
  * Starts the WebSocket server for browser extension communication.
+ * Includes retry logic for port binding issues.
  */
-function startBrowserTrackingServer(): void {
-    if (browserWss) return;
+function startBrowserTrackingServer(retryCount = 0): void {
+    if (browserWss) {
+        console.log('WebSocket server already running');
+        return;
+    }
+
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000;
 
     try {
         browserWss = new WebSocketServer({ port: BROWSER_WS_PORT });
+
+        browserWss.on('listening', () => {
+            console.log(`Browser tracking WebSocket server started on ws://localhost:${BROWSER_WS_PORT}`);
+            // Notify renderer that server is ready
+            mainWindow?.webContents.send('browser-activity', {
+                type: 'server_ready',
+                port: BROWSER_WS_PORT,
+                timestamp: Date.now(),
+            });
+        });
 
         browserWss.on('connection', (ws: WebSocket) => {
             console.log('Browser extension connected via WebSocket');
@@ -410,6 +427,17 @@ function startBrowserTrackingServer(): void {
                 clientCount: extensionClientsConnected,
                 timestamp: Date.now(),
             });
+
+            // Send acknowledgment back to extension
+            try {
+                ws.send(JSON.stringify({
+                    type: 'connection_acknowledged',
+                    timestamp: Date.now(),
+                    message: 'Connected to Wakey Desktop App'
+                }));
+            } catch (e) {
+                console.error('Failed to send acknowledgment:', e);
+            }
 
             // Handle pong responses (keeps connection alive)
             ws.on('pong', () => {
@@ -425,9 +453,9 @@ function startBrowserTrackingServer(): void {
                 }
             });
 
-            ws.on('close', () => {
-                console.log('Browser extension disconnected');
-                extensionClientsConnected--;
+            ws.on('close', (code, reason) => {
+                console.log(`Browser extension disconnected (code: ${code}, reason: ${reason || 'unknown'})`);
+                extensionClientsConnected = Math.max(0, extensionClientsConnected - 1);
                 connectedClients.delete(ws);
                 // Notify renderer that extension disconnected
                 mainWindow?.webContents.send('browser-activity', {
@@ -439,8 +467,9 @@ function startBrowserTrackingServer(): void {
             });
 
             ws.on('error', (error) => {
-                console.error('WebSocket error:', error);
+                console.error('WebSocket client error:', error);
                 connectedClients.delete(ws);
+                extensionClientsConnected = Math.max(0, extensionClientsConnected - 1);
             });
         });
 
@@ -450,6 +479,9 @@ function startBrowserTrackingServer(): void {
                 connectedClients.forEach((client) => {
                     if (client.readyState === WebSocket.OPEN) {
                         client.ping();
+                    } else {
+                        // Clean up dead connections
+                        connectedClients.delete(client);
                     }
                 });
             }, 20000);
@@ -457,16 +489,37 @@ function startBrowserTrackingServer(): void {
 
 
         browserWss.on('error', (error) => {
+            const nodeError = error as NodeJS.ErrnoException;
             console.error('WebSocket server error:', error);
-            // Try to restart on a different port if port is in use
-            if ((error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
-                console.log('Port in use, will retry...');
+
+            // Handle port in use - retry with backoff
+            if (nodeError.code === 'EADDRINUSE') {
+                console.log(`Port ${BROWSER_WS_PORT} in use, attempting to retry...`);
+                browserWss = null;
+
+                if (retryCount < MAX_RETRIES) {
+                    setTimeout(() => {
+                        console.log(`Retry attempt ${retryCount + 1}/${MAX_RETRIES}...`);
+                        startBrowserTrackingServer(retryCount + 1);
+                    }, RETRY_DELAY * (retryCount + 1));
+                } else {
+                    console.error(`Failed to start WebSocket server after ${MAX_RETRIES} attempts`);
+                    mainWindow?.webContents.send('browser-activity', {
+                        type: 'server_error',
+                        error: 'Port in use',
+                        timestamp: Date.now(),
+                    });
+                }
             }
         });
 
-        console.log(`Browser tracking WebSocket server started on ws://localhost:${BROWSER_WS_PORT}`);
     } catch (error) {
         console.error('Failed to start browser tracking server:', error);
+        if (retryCount < MAX_RETRIES) {
+            setTimeout(() => {
+                startBrowserTrackingServer(retryCount + 1);
+            }, RETRY_DELAY * (retryCount + 1));
+        }
     }
 }
 
@@ -793,7 +846,7 @@ function createWindow(): void {
         titleBarStyle: 'hidden',
         backgroundColor: '#0f172a',
         webPreferences: {
-            preload: join(__dirname, '../preload/index.js'),
+            preload: join(__dirname, '../preload/index.cjs'),
             sandbox: false,
             contextIsolation: true,
             nodeIntegration: false,
@@ -821,8 +874,29 @@ function createWindow(): void {
         });
     });
 
-    mainWindow.on('ready-to-show', () => mainWindow?.show());
-    mainWindow.on('close', (event) => { event.preventDefault(); mainWindow?.hide(); });
+    mainWindow.on('ready-to-show', () => {
+        console.log('Main window ready to show');
+        mainWindow?.show();
+    });
+
+    mainWindow.on('close', (event) => {
+        console.log('Main window close event triggered');
+        event.preventDefault();
+        mainWindow?.hide();
+    });
+
+    // Add error handling for window loading
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+        console.error('Window failed to load:', errorCode, errorDescription);
+    });
+
+    mainWindow.webContents.on('did-finish-load', () => {
+        console.log('Window finished loading successfully');
+    });
+
+    mainWindow.webContents.on('console-message', (_event, _level, message) => {
+        console.log('Renderer console:', message);
+    });
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
         mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
@@ -907,9 +981,36 @@ function decrypt(encryptedText: string): string {
 function setupIpcHandlers(): void {
     ipcMain.handle('get-settings', () => store.get('settings'));
     ipcMain.handle('set-setting', (_e, key: string, value: unknown) => { store.set(`settings.${key}` as keyof StoreSchema, value); return true; });
-    ipcMain.handle('window-minimize', () => mainWindow?.minimize());
-    ipcMain.handle('window-maximize', () => mainWindow?.isMaximized() ? mainWindow.unmaximize() : mainWindow?.maximize());
-    ipcMain.handle('window-close', () => mainWindow?.hide());
+    ipcMain.handle('window-minimize', async () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.minimize();
+            return true;
+        }
+        console.error('Main window not available for minimize');
+        return false;
+    });
+
+    ipcMain.handle('window-maximize', async () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isMaximized()) {
+                mainWindow.unmaximize();
+            } else {
+                mainWindow.maximize();
+            }
+            return true;
+        }
+        console.error('Main window not available for maximize');
+        return false;
+    });
+
+    ipcMain.handle('window-close', async () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.hide();
+            return true;
+        }
+        console.error('Main window not available for close');
+        return false;
+    });
     ipcMain.handle('get-tracking-status', () => isTracking);
     ipcMain.handle('set-tracking-status', async (_e, status: boolean) => {
         console.log('[IPC] set-tracking-status called with:', status);
@@ -939,6 +1040,71 @@ function setupIpcHandlers(): void {
         connected: extensionClientsConnected > 0,
         clientCount: extensionClientsConnected,
     }));
+
+    // Get activities for a date range (for analytics)
+    ipcMain.handle('get-activities-range', (_e, startDate: string, endDate: string) => {
+        const activities = store.get('activities', []);
+        return activities.filter(a => {
+            const date = a.created_at.split('T')[0];
+            return date >= startDate && date <= endDate;
+        });
+    });
+
+    // Get aggregated stats for a date range
+    ipcMain.handle('get-stats-range', (_e, startDate: string, endDate: string) => {
+        const activities = store.get('activities', []);
+        const sessions = store.get('focusSessions', []);
+
+        // Filter by date range
+        const rangeActivities = activities.filter(a => {
+            const date = a.created_at.split('T')[0];
+            return date >= startDate && date <= endDate;
+        });
+
+        const rangeSessions = sessions.filter(s => {
+            const date = s.started_at.split('T')[0];
+            return date >= startDate && date <= endDate;
+        });
+
+        // Group by day
+        const dailyStats: Record<string, {
+            date: string;
+            focusMinutes: number;
+            distractions: number;
+            sessions: number;
+            topApps: Record<string, number>;
+        }> = {};
+
+        rangeActivities.forEach(a => {
+            const date = a.created_at.split('T')[0];
+            if (!dailyStats[date]) {
+                dailyStats[date] = { date, focusMinutes: 0, distractions: 0, sessions: 0, topApps: {} };
+            }
+
+            if (!a.is_distraction) {
+                dailyStats[date].focusMinutes += Math.floor(a.duration_seconds / 60);
+            } else {
+                dailyStats[date].distractions++;
+            }
+
+            // Track app usage
+            const appKey = a.app_name;
+            dailyStats[date].topApps[appKey] = (dailyStats[date].topApps[appKey] || 0) + a.duration_seconds;
+        });
+
+        rangeSessions.forEach(s => {
+            const date = s.started_at.split('T')[0];
+            if (!dailyStats[date]) {
+                dailyStats[date] = { date, focusMinutes: 0, distractions: 0, sessions: 0, topApps: {} };
+            }
+            if (s.ended_at) {
+                dailyStats[date].sessions++;
+            }
+        });
+
+        // Convert to array and sort by date
+        return Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
+    });
 
     // Phase 5: Knowledge Management handlers
     ipcMain.handle('get-notes', () => store.get('notes', []));

@@ -26,7 +26,7 @@ export default function AnalyticsPage() {
 
     useEffect(() => {
         loadStats();
-        generateWeekData();
+        loadRealData();
     }, [period]);
 
     const loadStats = async () => {
@@ -39,30 +39,63 @@ export default function AnalyticsPage() {
         }
     };
 
-    const generateWeekData = () => {
-        // Generate sample week data (in real app, this would come from database)
-        const days: DayStats[] = [];
-        const today = new Date();
+    const loadRealData = async () => {
+        if (!window.wakey) return;
 
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            days.push({
-                date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                focusMinutes: Math.floor(Math.random() * 300) + 60,
-                distractions: Math.floor(Math.random() * 10),
-                sessions: Math.floor(Math.random() * 6) + 1,
-            });
+        try {
+            const today = new Date();
+            let startDate: Date;
+
+            // Calculate date range based on period
+            switch (period) {
+                case 'day':
+                    startDate = new Date(today);
+                    break;
+                case 'week':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 6);
+                    break;
+                case 'month':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 29);
+                    break;
+                default:
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 6);
+            }
+
+            const startStr = startDate.toISOString().split('T')[0];
+            const endStr = today.toISOString().split('T')[0];
+
+            // Fetch real data from the store
+            const rangeStats = await window.wakey.getStatsRange(startStr, endStr);
+
+            // Build complete date range (fill in missing days with zero values)
+            const days: DayStats[] = [];
+            const dayCount = period === 'day' ? 1 : period === 'week' ? 7 : 30;
+
+            for (let i = dayCount - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+
+                // Find real data for this date
+                const realData = rangeStats.find((s: { date: string }) => s.date === dateStr);
+
+                days.push({
+                    date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                    focusMinutes: realData?.focusMinutes || 0,
+                    distractions: realData?.distractions || 0,
+                    sessions: realData?.sessions || 0,
+                });
+            }
+
+            setWeekData(days);
+        } catch (error) {
+            console.error('Failed to load analytics data:', error);
+            // Fallback to empty data
+            setWeekData([]);
         }
-
-        // Set today's actual data
-        if (days.length > 0) {
-            days[days.length - 1].focusMinutes = stats.focusTime;
-            days[days.length - 1].distractions = stats.distractions;
-            days[days.length - 1].sessions = stats.sessions;
-        }
-
-        setWeekData(days);
     };
 
     const handleExportCSV = () => {
