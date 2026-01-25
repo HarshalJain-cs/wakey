@@ -1,10 +1,18 @@
-// wakey/apps/website/app/account/page.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { User, LogOut, Mail } from 'lucide-react';
+import {
+  SubscriptionWidget,
+  TodayStatsWidget,
+  FocusTrendsWidget,
+  QuickActionsWidget,
+  BillingHistoryWidget,
+  StreakWidget,
+} from '@/components/widgets';
 
 interface Subscription {
   plan_id: string;
@@ -14,14 +22,19 @@ interface Subscription {
   customer_id: string;
 }
 
+interface UserProfile {
+  email: string | null;
+  displayName: string | null;
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [_userEmail, setUserEmail] = useState<string | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  // Only create client on the client side
   const supabase = useMemo(() => {
     if (typeof window === 'undefined') return null;
     return createClient();
@@ -35,10 +48,14 @@ export default function AccountPage() {
 
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
-        router.push('/login'); // Redirect to login if not authenticated
+        router.push('/login');
         return;
       }
-      setUserEmail(session.user?.email || null);
+
+      setUser({
+        email: session.user?.email || null,
+        displayName: session.user?.user_metadata?.display_name || session.user?.email?.split('@')[0] || null,
+      });
 
       // Fetch subscription status
       const res = await fetch('/api/subscription');
@@ -60,14 +77,13 @@ export default function AccountPage() {
     if (subscription.provider === 'stripe') {
       try {
         setLoading(true);
-        // This is a simplified approach. In a real app, you'd call an API route
-        // to create a Stripe Customer Portal session for the current user.
-        // For now, assuming you can directly redirect if you have the session URL.
-        // Example: Call your backend to create a portal session:
         const response = await fetch('/api/stripe-customer-portal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customerId: subscription.customer_id, returnUrl: window.location.origin + '/account' }),
+          body: JSON.stringify({
+            customerId: subscription.customer_id,
+            returnUrl: window.location.origin + '/account',
+          }),
         });
         const { url } = await response.json();
         router.push(url);
@@ -77,77 +93,141 @@ export default function AccountPage() {
         setLoading(false);
       }
     } else if (subscription.provider === 'razorpay') {
-      // Razorpay doesn't have a direct "Customer Portal" like Stripe.
-      // You'd typically redirect them to a page where they can manage
-      // their Razorpay subscriptions, or provide links to Razorpay support.
-      // For now, we'll just log this.
       alert('Razorpay billing management not directly integrated. Please contact support.');
-      // You might redirect to a custom page or support link
     }
   };
 
+  const handleLogout = async () => {
+    if (!supabase) return;
+    setLoggingOut(true);
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-gray-700 dark:text-gray-300">Loading account data...</p>
+      <div className="min-h-screen flex items-center justify-center bg-dark-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full" />
+          <p className="text-dark-400">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center flex-col">
-        <p className="text-xl text-red-600 dark:text-red-400">Error: {error}</p>
-        <Link href="/pricing" className="mt-4 text-blue-600 hover:underline">Go to Pricing</Link>
+      <div className="min-h-screen flex items-center justify-center flex-col bg-dark-900 px-4">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 max-w-md text-center">
+          <p className="text-xl text-red-400 mb-4">Error: {error}</p>
+          <button
+            onClick={() => router.push('/pricing')}
+            className="px-6 py-3 bg-gradient-to-r from-teal-500 to-purple-500 text-white font-medium rounded-full hover:opacity-90 transition-opacity"
+          >
+            Go to Pricing
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">My Account</h1>
+    <div className="min-h-screen bg-dark-900 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4"
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              {greeting()}, {user?.displayName || 'there'}! 👋
+            </h1>
+            <p className="text-dark-400 mt-1">
+              Welcome to your Wakey dashboard
+            </p>
+          </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Subscription Details</h2>
-          {subscription ? (
-            <div>
-              <p>
-                <strong>Plan:</strong> {subscription.plan_id} ({subscription.provider})
-              </p>
-              <p>
-                <strong>Status:</strong> <span className="capitalize">{subscription.status}</span>
-              </p>
-              <p>
-                <strong>Renews on:</strong>{' '}
-                {new Date(subscription.current_period_end).toLocaleDateString()}
-              </p>
-              <button
-                onClick={handleManageBilling}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                disabled={loading}
-              >
-                Manage Billing
-              </button>
+          <div className="flex items-center gap-3">
+            {/* User Info */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-dark-800/50 backdrop-blur-xl rounded-full border border-dark-700/50">
+              <div className="p-2 bg-gradient-to-br from-teal-500/20 to-purple-500/20 rounded-full">
+                <User className="w-4 h-4 text-teal-400" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Mail className="w-3 h-3 text-dark-500" />
+                <span className="text-sm text-dark-300">{user?.email}</span>
+              </div>
             </div>
-          ) : (
-            <div>
-              <p>You currently do not have an active subscription.</p>
-              <Link href="/pricing" className="mt-4 text-blue-600 hover:underline">
-                Explore Plans
-              </Link>
-            </div>
-          )}
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="flex items-center gap-2 px-4 py-2 bg-dark-800/50 hover:bg-dark-700/50 backdrop-blur-xl rounded-full border border-dark-700/50 text-dark-300 hover:text-white transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm">{loggingOut ? 'Logging out...' : 'Logout'}</span>
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Widget Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Row 1 */}
+          <div className="md:col-span-1">
+            <SubscriptionWidget
+              subscription={subscription}
+              onManageBilling={handleManageBilling}
+              loading={loading}
+            />
+          </div>
+
+          <div className="md:col-span-1">
+            <TodayStatsWidget />
+          </div>
+
+          <div className="md:col-span-1">
+            <StreakWidget />
+          </div>
+
+          {/* Row 2 - Focus Trends spans 2 columns */}
+          <div className="md:col-span-2">
+            <FocusTrendsWidget />
+          </div>
+
+          <div className="md:col-span-1">
+            <QuickActionsWidget />
+          </div>
+
+          {/* Row 3 - Billing History spans 2 columns, empty space or future widget */}
+          <div className="md:col-span-2">
+            <BillingHistoryWidget />
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4">Billing History</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {/* TODO: Implement fetching and displaying billing history */}
-            Billing history will be displayed here.
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-12 text-dark-500 text-sm"
+        >
+          <p>
+            Data syncs automatically from your Wakey desktop app.{' '}
+            <a href="/docs/sync" className="text-teal-400 hover:text-teal-300 transition-colors">
+              Learn more about sync
+            </a>
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
