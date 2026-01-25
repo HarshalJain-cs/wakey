@@ -114,9 +114,10 @@ export default function App() {
                     if (authenticated) {
                         loadRealAnalysisData();
                     }
-                } else if (!authRequired) {
+                } else {
+                    // Auth not required OR Supabase not configured - allow access
                     setIsAuthenticated(true);
-                    // Initialize real analysis when auth is not required
+                    // Initialize real analysis
                     loadRealAnalysisData();
                 }
             } catch (error) {
