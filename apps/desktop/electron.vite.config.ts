@@ -2,13 +2,29 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
+
+// Plugin to ensure preload output is treated as CommonJS
+const ensurePreloadCJS = () => ({
+    name: 'ensure-preload-cjs',
+    writeBundle() {
+        const preloadDir = resolve(__dirname, 'out/preload');
+        if (!existsSync(preloadDir)) {
+            mkdirSync(preloadDir, { recursive: true });
+        }
+        writeFileSync(
+            resolve(preloadDir, 'package.json'),
+            JSON.stringify({ type: 'commonjs' }, null, 2)
+        );
+    }
+});
 
 export default defineConfig({
     main: {
         plugins: [externalizeDepsPlugin()],
     },
     preload: {
-        plugins: [externalizeDepsPlugin({ exclude: ['electron'] })],
+        plugins: [externalizeDepsPlugin({ exclude: ['electron'] }), ensurePreloadCJS()],
         build: {
             rollupOptions: {
                 output: {
