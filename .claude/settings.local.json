@@ -43,7 +43,9 @@
       "Bash(cmd.exe /c \"tasklist /FI \"\"PID eq 6456\"\"\")",
       "Bash(cmd.exe /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :8765 ^| findstr LISTENING''\\) do taskkill /F /PID %a\")",
       "Bash(cmd.exe /c \"tasklist | findstr -i electron\")",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(wc:*)",
+      "Bash(Service \")"
     ]
   },
   "enableAllProjectMcpServers": true,
