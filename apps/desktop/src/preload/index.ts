@@ -44,6 +44,11 @@ contextBridge.exposeInMainWorld('wakey', {
     getAgentTasks: () => ipcRenderer.invoke('get-agent-tasks'),
     saveAgentTasks: (tasks: any[]) => ipcRenderer.invoke('save-agent-tasks', tasks),
 
+    // Focus Presets
+    getFocusPresets: () => ipcRenderer.invoke('get-focus-presets'),
+    saveFocusPreset: (preset: any) => ipcRenderer.invoke('save-focus-preset', preset),
+    deleteFocusPreset: (id: string) => ipcRenderer.invoke('delete-focus-preset', id),
+
     // Extension status
     getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
 
@@ -52,6 +57,20 @@ contextBridge.exposeInMainWorld('wakey', {
         ipcRenderer.invoke('get-activities-range', startDate, endDate),
     getStatsRange: (startDate: string, endDate: string) =>
         ipcRenderer.invoke('get-stats-range', startDate, endDate),
+
+    // Enhanced Analytics
+    getTopWebsites: (limit?: number, startDate?: string, endDate?: string) =>
+        ipcRenderer.invoke('get-top-websites', limit, startDate, endDate),
+    getTopApps: (limit?: number, startDate?: string, endDate?: string) =>
+        ipcRenderer.invoke('get-top-apps', limit, startDate, endDate),
+    getCategoryBreakdown: (startDate?: string, endDate?: string) =>
+        ipcRenderer.invoke('get-category-breakdown', startDate, endDate),
+    getProductiveVsDistracting: (startDate?: string, endDate?: string) =>
+        ipcRenderer.invoke('get-productive-vs-distracting', startDate, endDate),
+    getHourlyHeatmap: (startDate?: string, endDate?: string) =>
+        ipcRenderer.invoke('get-hourly-heatmap', startDate, endDate),
+    getAllTimeStats: () => ipcRenderer.invoke('get-all-time-stats'),
+    getWeekComparison: () => ipcRenderer.invoke('get-week-comparison'),
 
     // Event listeners
     onTrackingToggle: (callback: (status: boolean) => void) => {
@@ -140,6 +159,9 @@ declare global {
             saveFlashcards: (cards: any[]) => Promise<boolean>;
             getAgentTasks: () => Promise<any[]>;
             saveAgentTasks: (tasks: any[]) => Promise<boolean>;
+            getFocusPresets: () => Promise<any[]>;
+            saveFocusPreset: (preset: any) => Promise<boolean>;
+            deleteFocusPreset: (id: string) => Promise<boolean>;
             getExtensionStatus: () => Promise<{ connected: boolean; clientCount: number }>;
             getActivitiesRange: (startDate: string, endDate: string) => Promise<any[]>;
             getStatsRange: (startDate: string, endDate: string) => Promise<{
@@ -149,6 +171,46 @@ declare global {
                 sessions: number;
                 topApps: Record<string, number>;
             }[]>;
+            getTopWebsites: (limit?: number, startDate?: string, endDate?: string) => Promise<{
+                name: string;
+                minutes: number;
+                category: string;
+                isDistraction: boolean;
+            }[]>;
+            getTopApps: (limit?: number, startDate?: string, endDate?: string) => Promise<{
+                name: string;
+                minutes: number;
+                category: string;
+                isDistraction: boolean;
+            }[]>;
+            getCategoryBreakdown: (startDate?: string, endDate?: string) => Promise<{
+                name: string;
+                minutes: number;
+            }[]>;
+            getProductiveVsDistracting: (startDate?: string, endDate?: string) => Promise<{
+                productive: number;
+                distracting: number;
+            }>;
+            getHourlyHeatmap: (startDate?: string, endDate?: string) => Promise<{
+                day: string;
+                hour: number;
+                value: number;
+            }[]>;
+            getAllTimeStats: () => Promise<{
+                totalFocusMinutes: number;
+                totalDistractingMinutes: number;
+                totalDistractions: number;
+                completedSessions: number;
+                avgQuality: number;
+                firstDate: string | null;
+                lastDate: string | null;
+                totalDays: number;
+            }>;
+            getWeekComparison: () => Promise<{
+                thisWeek: { focusMinutes: number; distractions: number };
+                lastWeek: { focusMinutes: number; distractions: number };
+                change: { focusPercent: number; distractionsPercent: number };
+            }>;
             onTrackingToggle: (callback: (status: boolean) => void) => void;
             onFocusStart: (callback: () => void) => void;
             onNavigate: (callback: (route: string) => void) => void;

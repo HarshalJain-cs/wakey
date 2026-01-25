@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX, Settings2, ChevronRight } from 'lucide-react';
 import { audioService } from '../services/audio-service';
+import { FocusPreset, pomodoroService, DEFAULT_PRESETS } from '../services/pomodoro-service';
+import CustomTimerModal from '../components/CustomTimerModal';
 
 interface TimerState {
     isRunning: boolean;
@@ -9,13 +11,10 @@ interface TimerState {
     sessionType: string;
     sessionId: number | null;
     distractionCount: number;
+    currentCycle: number;
+    totalCycles: number;
+    breakIntervalRemaining: number | null;
 }
-
-const SESSION_PRESETS = [
-    { label: 'Pomodoro', focus: 25, break: 5 },
-    { label: 'Deep Work', focus: 45, break: 10 },
-    { label: 'Long Focus', focus: 90, break: 15 },
-];
 
 export default function FocusPage() {
     const [timer, setTimer] = useState<TimerState>({
@@ -25,11 +24,15 @@ export default function FocusPage() {
         sessionType: 'Pomodoro',
         sessionId: null,
         distractionCount: 0,
+        currentCycle: 1,
+        totalCycles: 1,
+        breakIntervalRemaining: null,
     });
-    const [selectedPreset, setSelectedPreset] = useState(0);
+    const [selectedPreset, setSelectedPreset] = useState<FocusPreset>(DEFAULT_PRESETS[0]);
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [sessionsToday, setSessionsToday] = useState(0);
     const [focusToday, setFocusToday] = useState(0);
+    const [showCustomModal, setShowCustomModal] = useState(false);
 
     useEffect(() => {
         loadStats();
@@ -62,38 +65,62 @@ export default function FocusPage() {
             Math.floor(timer.timeRemaining / 60)
         );
 
+        // Initialize break interval timer if configured
+        const breakIntervalRemaining = selectedPreset.breakInterval > 0 && timer.mode === 'focus'
+            ? selectedPreset.breakInterval * 60
+            : null;
+
         setTimer(prev => ({
             ...prev,
             isRunning: true,
             sessionId,
             distractionCount: 0,
+            breakIntervalRemaining,
         }));
-    }, [timer.mode, timer.timeRemaining]);
+    }, [timer.mode, timer.timeRemaining, selectedPreset.breakInterval]);
 
     const pauseTimer = useCallback(() => {
         setTimer(prev => ({ ...prev, isRunning: false }));
     }, []);
 
     const resetTimer = useCallback(() => {
-        const preset = SESSION_PRESETS[selectedPreset];
         setTimer(prev => ({
             ...prev,
             isRunning: false,
-            timeRemaining: (prev.mode === 'focus' ? preset.focus : preset.break) * 60,
+            timeRemaining: (prev.mode === 'focus' ? selectedPreset.focusDuration : selectedPreset.breakDuration) * 60,
             sessionId: null,
             distractionCount: 0,
+            currentCycle: 1,
+            breakIntervalRemaining: null,
         }));
     }, [selectedPreset]);
 
-    const selectPreset = (index: number) => {
-        setSelectedPreset(index);
-        const preset = SESSION_PRESETS[index];
+    const selectPreset = (preset: FocusPreset) => {
+        setSelectedPreset(preset);
         setTimer(prev => ({
             ...prev,
-            sessionType: preset.label,
-            timeRemaining: (prev.mode === 'focus' ? preset.focus : preset.break) * 60,
+            sessionType: preset.name,
+            timeRemaining: (prev.mode === 'focus' ? preset.focusDuration : preset.breakDuration) * 60,
             isRunning: false,
             sessionId: null,
+            currentCycle: 1,
+            totalCycles: preset.cycles,
+            breakIntervalRemaining: null,
+        }));
+    };
+
+    const handleCustomStart = (preset: FocusPreset) => {
+        setSelectedPreset(preset);
+        setTimer(prev => ({
+            ...prev,
+            sessionType: preset.name,
+            timeRemaining: preset.focusDuration * 60,
+            mode: 'focus',
+            isRunning: false,
+            sessionId: null,
+            currentCycle: 1,
+            totalCycles: preset.cycles,
+            breakIntervalRemaining: null,
         }));
     };
 
@@ -103,43 +130,103 @@ export default function FocusPage() {
 
         if (timer.isRunning && timer.timeRemaining > 0) {
             interval = setInterval(() => {
-                setTimer(prev => ({
-                    ...prev,
-                    timeRemaining: prev.timeRemaining - 1,
-                }));
+                setTimer(prev => {
+                    const newTimeRemaining = prev.timeRemaining - 1;
+                    let newBreakIntervalRemaining = prev.breakIntervalRemaining;
+
+                    // Check for interval break
+                    if (newBreakIntervalRemaining !== null && prev.mode === 'focus') {
+                        newBreakIntervalRemaining--;
+                        if (newBreakIntervalRemaining <= 0 && newTimeRemaining > 0) {
+                            // Trigger interval break notification
+                            if (soundEnabled) {
+                                audioService.playEffect('break-start');
+                                new Notification('Quick Break Time!', {
+                                    body: 'Take a 2-minute stretch break.',
+                                });
+                            }
+                            // Reset interval timer
+                            newBreakIntervalRemaining = selectedPreset.breakInterval * 60;
+                        }
+                    }
+
+                    return {
+                        ...prev,
+                        timeRemaining: newTimeRemaining,
+                        breakIntervalRemaining: newBreakIntervalRemaining,
+                    };
+                });
             }, 1000);
         } else if (timer.timeRemaining === 0 && timer.sessionId) {
-            // Session complete
+            // Session/cycle complete
             const quality = Math.max(0, 100 - timer.distractionCount * 10);
             if (window.wakey) {
                 window.wakey.endFocusSession(timer.sessionId, quality, timer.distractionCount);
             }
 
-            if (soundEnabled) {
-                // Play sound effect based on mode
-                audioService.playEffect(timer.mode === 'focus' ? 'timer-complete' : 'break-end');
+            if (timer.mode === 'focus') {
+                // Focus cycle completed
+                if (timer.currentCycle < timer.totalCycles) {
+                    // More cycles remaining - start break
+                    if (soundEnabled) {
+                        audioService.playEffect('timer-complete');
+                        new Notification('Focus Cycle Complete!', {
+                            body: `Cycle ${timer.currentCycle}/${timer.totalCycles} done. Time for a break!`,
+                        });
+                    }
 
-                // Also show notification
-                new Notification(timer.mode === 'focus' ? '🎉 Focus Complete!' : '☕ Break Over!', {
-                    body: timer.mode === 'focus' ? 'Time for a break!' : 'Ready to focus again?',
-                });
+                    setTimer(prev => ({
+                        ...prev,
+                        isRunning: false,
+                        mode: 'break',
+                        timeRemaining: selectedPreset.breakDuration * 60,
+                        sessionId: null,
+                        breakIntervalRemaining: null,
+                    }));
+                } else {
+                    // All cycles completed
+                    if (soundEnabled) {
+                        audioService.playEffect('session-complete');
+                        new Notification('All Cycles Complete!', {
+                            body: `Great work! You completed ${timer.totalCycles} focus cycle${timer.totalCycles > 1 ? 's' : ''}.`,
+                        });
+                    }
+
+                    setTimer(prev => ({
+                        ...prev,
+                        isRunning: false,
+                        mode: 'focus',
+                        timeRemaining: selectedPreset.focusDuration * 60,
+                        sessionId: null,
+                        currentCycle: 1,
+                        breakIntervalRemaining: null,
+                    }));
+                }
+            } else {
+                // Break completed - start next focus cycle
+                if (soundEnabled) {
+                    audioService.playEffect('break-end');
+                    new Notification('Break Over!', {
+                        body: `Ready for cycle ${timer.currentCycle + 1}/${timer.totalCycles}?`,
+                    });
+                }
+
+                setTimer(prev => ({
+                    ...prev,
+                    isRunning: false,
+                    mode: 'focus',
+                    timeRemaining: selectedPreset.focusDuration * 60,
+                    sessionId: null,
+                    currentCycle: prev.currentCycle + 1,
+                    breakIntervalRemaining: null,
+                }));
             }
-
-            // Switch mode
-            const preset = SESSION_PRESETS[selectedPreset];
-            setTimer(prev => ({
-                ...prev,
-                isRunning: false,
-                mode: prev.mode === 'focus' ? 'break' : 'focus',
-                timeRemaining: (prev.mode === 'focus' ? preset.break : preset.focus) * 60,
-                sessionId: null,
-            }));
 
             loadStats();
         }
 
         return () => clearInterval(interval);
-    }, [timer.isRunning, timer.timeRemaining, timer.sessionId, timer.distractionCount, timer.mode, selectedPreset, soundEnabled]);
+    }, [timer.isRunning, timer.timeRemaining, timer.sessionId, timer.distractionCount, timer.mode, timer.currentCycle, timer.totalCycles, selectedPreset, soundEnabled]);
 
     // Listen for distractions
     useEffect(() => {
@@ -161,21 +248,39 @@ export default function FocusPage() {
         };
     }, [timer.isRunning, timer.mode]);
 
-    const preset = SESSION_PRESETS[selectedPreset];
-    const totalSeconds = (timer.mode === 'focus' ? preset.focus : preset.break) * 60;
+    const totalSeconds = (timer.mode === 'focus' ? selectedPreset.focusDuration : selectedPreset.breakDuration) * 60;
     const progress = ((totalSeconds - timer.timeRemaining) / totalSeconds) * 100;
 
     return (
         <div className="max-w-2xl mx-auto py-8">
             <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2">
-                    {timer.mode === 'focus' ? '🎯 Focus Mode' : '☕ Break Time'}
+                    {timer.mode === 'focus' ? 'Focus Mode' : 'Break Time'}
                 </h1>
                 <p className="text-dark-400">
                     {timer.mode === 'focus'
                         ? 'Stay focused and minimize distractions'
                         : 'Take a break, stretch, and recharge'}
                 </p>
+                {timer.totalCycles > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                        {Array.from({ length: timer.totalCycles }, (_, i) => (
+                            <div
+                                key={i}
+                                className={`w-3 h-3 rounded-full transition-all ${
+                                    i < timer.currentCycle
+                                        ? 'bg-primary-500'
+                                        : i === timer.currentCycle - 1 && timer.mode === 'focus'
+                                        ? 'bg-primary-500 animate-pulse'
+                                        : 'bg-dark-600'
+                                }`}
+                            />
+                        ))}
+                        <span className="text-dark-400 text-sm ml-2">
+                            Cycle {timer.currentCycle}/{timer.totalCycles}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Timer Circle */}
@@ -206,6 +311,11 @@ export default function FocusPage() {
                         {timer.isRunning && timer.distractionCount > 0 && (
                             <div className="text-red-400 text-sm mt-2">
                                 {timer.distractionCount} distraction{timer.distractionCount > 1 ? 's' : ''}
+                            </div>
+                        )}
+                        {timer.breakIntervalRemaining !== null && timer.mode === 'focus' && timer.isRunning && (
+                            <div className="text-yellow-400 text-xs mt-1">
+                                Break in {Math.floor(timer.breakIntervalRemaining / 60)}m
                             </div>
                         )}
                     </div>
@@ -240,21 +350,35 @@ export default function FocusPage() {
             </div>
 
             {/* Presets */}
-            <div className="flex justify-center gap-3 mb-8">
-                {SESSION_PRESETS.map((p, i) => (
+            <div className="flex flex-wrap justify-center gap-3 mb-6">
+                {DEFAULT_PRESETS.map((preset) => (
                     <button
-                        key={i}
-                        onClick={() => selectPreset(i)}
+                        key={preset.id}
+                        onClick={() => selectPreset(preset)}
                         disabled={timer.isRunning}
-                        className={`px-6 py-3 rounded-xl transition-all ${selectedPreset === i
+                        className={`px-5 py-3 rounded-xl transition-all ${selectedPreset.id === preset.id
                             ? 'bg-primary-500 text-white'
                             : 'bg-dark-800 text-dark-400 hover:bg-dark-700 disabled:opacity-50'
                             }`}
                     >
-                        <div className="font-medium">{p.label}</div>
-                        <div className="text-xs opacity-75">{p.focus}m focus / {p.break}m break</div>
+                        <div className="font-medium">{preset.name}</div>
+                        <div className="text-xs opacity-75">
+                            {preset.focusDuration}m × {preset.cycles} cycle{preset.cycles > 1 ? 's' : ''}
+                        </div>
                     </button>
                 ))}
+                <button
+                    onClick={() => setShowCustomModal(true)}
+                    disabled={timer.isRunning}
+                    className="px-5 py-3 rounded-xl bg-dark-800 text-dark-400 hover:bg-dark-700 disabled:opacity-50 transition-all flex items-center gap-2"
+                >
+                    <Settings2 className="w-4 h-4" />
+                    <div>
+                        <div className="font-medium">Custom</div>
+                        <div className="text-xs opacity-75">5-120 min</div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                </button>
             </div>
 
             {/* Mode Toggle */}
@@ -263,7 +387,7 @@ export default function FocusPage() {
                     onClick={() => !timer.isRunning && setTimer(prev => ({
                         ...prev,
                         mode: 'focus',
-                        timeRemaining: preset.focus * 60,
+                        timeRemaining: selectedPreset.focusDuration * 60,
                     }))}
                     disabled={timer.isRunning}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${timer.mode === 'focus'
@@ -278,7 +402,7 @@ export default function FocusPage() {
                     onClick={() => !timer.isRunning && setTimer(prev => ({
                         ...prev,
                         mode: 'break',
-                        timeRemaining: preset.break * 60,
+                        timeRemaining: selectedPreset.breakDuration * 60,
                     }))}
                     disabled={timer.isRunning}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${timer.mode === 'break'
@@ -307,6 +431,14 @@ export default function FocusPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Custom Timer Modal */}
+            <CustomTimerModal
+                isOpen={showCustomModal}
+                onClose={() => setShowCustomModal(false)}
+                onStart={handleCustomStart}
+                currentPreset={selectedPreset}
+            />
         </div>
     );
 }

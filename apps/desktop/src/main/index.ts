@@ -128,6 +128,16 @@ interface AgentTask {
     createdAt: string;
 }
 
+interface FocusPreset {
+    id: string;
+    name: string;
+    focusDuration: number;
+    breakInterval: number;
+    breakDuration: number;
+    cycles: number;
+    isDefault?: boolean;
+}
+
 interface StoreSchema {
     settings: {
         autoStartTracking: boolean;
@@ -152,6 +162,7 @@ interface StoreSchema {
     knowledgeEdges: KnowledgeEdge[];
     flashcards: Flashcard[];
     agentTasks: AgentTask[];
+    focusPresets: FocusPreset[];
     nextIds: {
         activity: number;
         session: number;
@@ -185,6 +196,7 @@ const store = new Store<StoreSchema>({
         knowledgeEdges: [],
         flashcards: [],
         agentTasks: [],
+        focusPresets: [],
         nextIds: {
             activity: 1,
             session: 1,
@@ -1124,6 +1136,253 @@ function setupIpcHandlers(): void {
     // Phase 5: Agent handlers
     ipcMain.handle('get-agent-tasks', () => store.get('agentTasks', []));
     ipcMain.handle('save-agent-tasks', (_e, tasks: AgentTask[]) => { store.set('agentTasks', tasks); return true; });
+
+    // Focus Presets handlers
+    ipcMain.handle('get-focus-presets', () => store.get('focusPresets', []));
+    ipcMain.handle('save-focus-preset', (_e, preset: FocusPreset) => {
+        const presets = store.get('focusPresets', []);
+        presets.push(preset);
+        store.set('focusPresets', presets);
+        return true;
+    });
+    ipcMain.handle('delete-focus-preset', (_e, id: string) => {
+        const presets = store.get('focusPresets', []).filter(p => p.id !== id);
+        store.set('focusPresets', presets);
+        return true;
+    });
+
+    // Enhanced Analytics handlers
+    ipcMain.handle('get-top-websites', (_e, limit: number = 10, startDate?: string, endDate?: string) => {
+        const activities = store.get('activities', []);
+        const filtered = activities.filter(a => {
+            // Filter for browser activities with domain info
+            if (!a.window_title?.includes(' - ')) return false;
+            if (startDate && a.created_at < startDate) return false;
+            if (endDate && a.created_at > endDate + 'T23:59:59') return false;
+            return true;
+        });
+
+        // Extract domains and aggregate time
+        const domainTimes = new Map<string, { time: number; category: string; isDistraction: boolean }>();
+        filtered.forEach(a => {
+            const parts = a.window_title.split(' - ');
+            const domain = parts[0]?.trim() || 'Unknown';
+            if (!domain || domain === 'Unknown') return;
+
+            const current = domainTimes.get(domain) || { time: 0, category: a.category, isDistraction: a.is_distraction };
+            current.time += a.duration_seconds;
+            domainTimes.set(domain, current);
+        });
+
+        return Array.from(domainTimes.entries())
+            .map(([domain, data]) => ({
+                name: domain,
+                minutes: Math.round(data.time / 60),
+                category: data.category,
+                isDistraction: data.isDistraction,
+            }))
+            .sort((a, b) => b.minutes - a.minutes)
+            .slice(0, limit);
+    });
+
+    ipcMain.handle('get-top-apps', (_e, limit: number = 10, startDate?: string, endDate?: string) => {
+        const activities = store.get('activities', []);
+        const filtered = activities.filter(a => {
+            if (startDate && a.created_at < startDate) return false;
+            if (endDate && a.created_at > endDate + 'T23:59:59') return false;
+            return true;
+        });
+
+        // Aggregate by app name
+        const appTimes = new Map<string, { time: number; category: string; isDistraction: boolean }>();
+        filtered.forEach(a => {
+            const current = appTimes.get(a.app_name) || { time: 0, category: a.category, isDistraction: a.is_distraction };
+            current.time += a.duration_seconds;
+            appTimes.set(a.app_name, current);
+        });
+
+        return Array.from(appTimes.entries())
+            .map(([app, data]) => ({
+                name: app,
+                minutes: Math.round(data.time / 60),
+                category: data.category,
+                isDistraction: data.isDistraction,
+            }))
+            .sort((a, b) => b.minutes - a.minutes)
+            .slice(0, limit);
+    });
+
+    ipcMain.handle('get-category-breakdown', (_e, startDate?: string, endDate?: string) => {
+        const activities = store.get('activities', []);
+        const filtered = activities.filter(a => {
+            if (startDate && a.created_at < startDate) return false;
+            if (endDate && a.created_at > endDate + 'T23:59:59') return false;
+            return true;
+        });
+
+        const categoryTimes = new Map<string, number>();
+        filtered.forEach(a => {
+            const current = categoryTimes.get(a.category) || 0;
+            categoryTimes.set(a.category, current + a.duration_seconds);
+        });
+
+        return Array.from(categoryTimes.entries())
+            .map(([category, seconds]) => ({
+                name: category,
+                minutes: Math.round(seconds / 60),
+            }))
+            .sort((a, b) => b.minutes - a.minutes);
+    });
+
+    ipcMain.handle('get-productive-vs-distracting', (_e, startDate?: string, endDate?: string) => {
+        const activities = store.get('activities', []);
+        const filtered = activities.filter(a => {
+            if (startDate && a.created_at < startDate) return false;
+            if (endDate && a.created_at > endDate + 'T23:59:59') return false;
+            return true;
+        });
+
+        let productive = 0;
+        let distracting = 0;
+
+        filtered.forEach(a => {
+            if (a.is_distraction) {
+                distracting += a.duration_seconds;
+            } else {
+                productive += a.duration_seconds;
+            }
+        });
+
+        return {
+            productive: Math.round(productive / 60),
+            distracting: Math.round(distracting / 60),
+        };
+    });
+
+    ipcMain.handle('get-hourly-heatmap', (_e, startDate?: string, endDate?: string) => {
+        const activities = store.get('activities', []);
+        const filtered = activities.filter(a => {
+            if (startDate && a.created_at < startDate) return false;
+            if (endDate && a.created_at > endDate + 'T23:59:59') return false;
+            return true;
+        });
+
+        // Create heatmap data: day of week × hour
+        const heatmap: { day: string; hour: number; value: number }[] = [];
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Initialize all cells
+        for (const day of dayNames) {
+            for (let hour = 0; hour < 24; hour++) {
+                heatmap.push({ day, hour, value: 0 });
+            }
+        }
+
+        // Aggregate activity times
+        filtered.forEach(a => {
+            const date = new Date(a.created_at);
+            const day = dayNames[date.getDay()];
+            const hour = date.getHours();
+            const cell = heatmap.find(h => h.day === day && h.hour === hour);
+            if (cell) {
+                cell.value += Math.round(a.duration_seconds / 60);
+            }
+        });
+
+        return heatmap;
+    });
+
+    ipcMain.handle('get-all-time-stats', () => {
+        const activities = store.get('activities', []);
+        const sessions = store.get('focusSessions', []);
+
+        let totalFocusMinutes = 0;
+        let totalDistractingMinutes = 0;
+        let totalDistractions = 0;
+
+        activities.forEach(a => {
+            if (a.is_distraction) {
+                totalDistractingMinutes += a.duration_seconds / 60;
+                totalDistractions++;
+            } else {
+                totalFocusMinutes += a.duration_seconds / 60;
+            }
+        });
+
+        const completedSessions = sessions.filter(s => s.ended_at).length;
+        const avgQuality = sessions.length > 0
+            ? Math.round(sessions.reduce((sum, s) => sum + s.quality_score, 0) / sessions.length)
+            : 0;
+
+        // Get date range
+        const dates = activities.map(a => a.created_at.split('T')[0]).sort();
+        const firstDate = dates[0] || null;
+        const lastDate = dates[dates.length - 1] || null;
+
+        return {
+            totalFocusMinutes: Math.round(totalFocusMinutes),
+            totalDistractingMinutes: Math.round(totalDistractingMinutes),
+            totalDistractions,
+            completedSessions,
+            avgQuality,
+            firstDate,
+            lastDate,
+            totalDays: new Set(dates).size,
+        };
+    });
+
+    ipcMain.handle('get-week-comparison', () => {
+        const activities = store.get('activities', []);
+        const today = new Date();
+
+        // This week (last 7 days)
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - 6);
+        const thisWeekStartStr = thisWeekStart.toISOString().split('T')[0];
+
+        // Last week (7-14 days ago)
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - 13);
+        const lastWeekStartStr = lastWeekStart.toISOString().split('T')[0];
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - 7);
+        const lastWeekEndStr = lastWeekEnd.toISOString().split('T')[0];
+
+        let thisWeekFocus = 0;
+        let thisWeekDistractions = 0;
+        let lastWeekFocus = 0;
+        let lastWeekDistractions = 0;
+
+        activities.forEach(a => {
+            const date = a.created_at.split('T')[0];
+            if (date >= thisWeekStartStr) {
+                if (!a.is_distraction) thisWeekFocus += a.duration_seconds;
+                else thisWeekDistractions++;
+            } else if (date >= lastWeekStartStr && date <= lastWeekEndStr) {
+                if (!a.is_distraction) lastWeekFocus += a.duration_seconds;
+                else lastWeekDistractions++;
+            }
+        });
+
+        return {
+            thisWeek: {
+                focusMinutes: Math.round(thisWeekFocus / 60),
+                distractions: thisWeekDistractions,
+            },
+            lastWeek: {
+                focusMinutes: Math.round(lastWeekFocus / 60),
+                distractions: lastWeekDistractions,
+            },
+            change: {
+                focusPercent: lastWeekFocus > 0
+                    ? Math.round(((thisWeekFocus - lastWeekFocus) / lastWeekFocus) * 100)
+                    : 0,
+                distractionsPercent: lastWeekDistractions > 0
+                    ? Math.round(((thisWeekDistractions - lastWeekDistractions) / lastWeekDistractions) * 100)
+                    : 0,
+            },
+        };
+    });
 
     ipcMain.on('open-dashboard', () => {
         if (mainWindow) {

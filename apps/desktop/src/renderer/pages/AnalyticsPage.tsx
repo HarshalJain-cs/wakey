@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
-    BarChart3, Clock, Target, TrendingUp,
-    Download, FileJson, FileText, Printer
+    BarChart3, Clock, Target, TrendingUp, TrendingDown,
+    Download, FileJson, FileText, Printer, Globe, Monitor,
+    ArrowUp, ArrowDown, Calendar
 } from 'lucide-react';
 import { exportToCSV, exportToJSON, exportToPDF } from '../services/export-service';
+import { AnimatedPieChart, AnimatedBarChart, AnimatedLineChart, HeatmapChart } from '../components/charts';
+import { CHART_COLORS } from '../constants/chart-colors';
 
 interface DayStats {
     [key: string]: string | number;
@@ -13,8 +16,10 @@ interface DayStats {
     sessions: number;
 }
 
+type Period = 'day' | 'week' | 'month' | 'all';
+
 export default function AnalyticsPage() {
-    const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+    const [period, setPeriod] = useState<Period>('week');
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [stats, setStats] = useState({
         focusTime: 0,
@@ -23,11 +28,60 @@ export default function AnalyticsPage() {
         topApps: [] as { app: string; minutes: number }[],
     });
     const [weekData, setWeekData] = useState<DayStats[]>([]);
+    const [topWebsites, setTopWebsites] = useState<{ name: string; minutes: number; isDistraction: boolean }[]>([]);
+    const [topApps, setTopApps] = useState<{ name: string; minutes: number; isDistraction: boolean }[]>([]);
+    const [categoryData, setCategoryData] = useState<{ name: string; minutes: number }[]>([]);
+    const [productiveData, setProductiveData] = useState({ productive: 0, distracting: 0 });
+    const [heatmapData, setHeatmapData] = useState<{ day: string; hour: number; value: number }[]>([]);
+    const [weekComparison, setWeekComparison] = useState<{
+        thisWeek: { focusMinutes: number; distractions: number };
+        lastWeek: { focusMinutes: number; distractions: number };
+        change: { focusPercent: number; distractionsPercent: number };
+    } | null>(null);
+    const [allTimeStats, setAllTimeStats] = useState<{
+        totalFocusMinutes: number;
+        totalDistractingMinutes: number;
+        totalDistractions: number;
+        completedSessions: number;
+        avgQuality: number;
+        firstDate: string | null;
+        lastDate: string | null;
+        totalDays: number;
+    } | null>(null);
 
     useEffect(() => {
         loadStats();
-        loadRealData();
+        loadEnhancedData();
     }, [period]);
+
+    const getDateRange = () => {
+        const today = new Date();
+        let startDate: Date;
+
+        switch (period) {
+            case 'day':
+                startDate = new Date(today);
+                break;
+            case 'week':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 6);
+                break;
+            case 'month':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 29);
+                break;
+            case 'all':
+                return { startStr: undefined, endStr: undefined };
+            default:
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 6);
+        }
+
+        return {
+            startStr: startDate.toISOString().split('T')[0],
+            endStr: today.toISOString().split('T')[0],
+        };
+    };
 
     const loadStats = async () => {
         if (!window.wakey) return;
@@ -39,62 +93,65 @@ export default function AnalyticsPage() {
         }
     };
 
-    const loadRealData = async () => {
+    const loadEnhancedData = async () => {
         if (!window.wakey) return;
 
         try {
-            const today = new Date();
-            let startDate: Date;
+            const { startStr, endStr } = getDateRange();
 
-            // Calculate date range based on period
-            switch (period) {
-                case 'day':
-                    startDate = new Date(today);
-                    break;
-                case 'week':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 6);
-                    break;
-                case 'month':
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 29);
-                    break;
-                default:
-                    startDate = new Date(today);
-                    startDate.setDate(today.getDate() - 6);
+            // Load all data in parallel
+            const [
+                websites,
+                apps,
+                categories,
+                productive,
+                heatmap,
+                comparison,
+                allTime,
+                rangeStats,
+            ] = await Promise.all([
+                window.wakey.getTopWebsites?.(10, startStr, endStr) || [],
+                window.wakey.getTopApps?.(10, startStr, endStr) || [],
+                window.wakey.getCategoryBreakdown?.(startStr, endStr) || [],
+                window.wakey.getProductiveVsDistracting?.(startStr, endStr) || { productive: 0, distracting: 0 },
+                window.wakey.getHourlyHeatmap?.(startStr, endStr) || [],
+                window.wakey.getWeekComparison?.() || null,
+                window.wakey.getAllTimeStats?.() || null,
+                startStr ? window.wakey.getStatsRange(startStr, endStr!) : Promise.resolve([]),
+            ]);
+
+            setTopWebsites(websites);
+            setTopApps(apps);
+            setCategoryData(categories);
+            setProductiveData(productive);
+            setHeatmapData(heatmap);
+            setWeekComparison(comparison);
+            setAllTimeStats(allTime);
+
+            // Build week data with filled days
+            if (rangeStats && Array.isArray(rangeStats)) {
+                const today = new Date();
+                const dayCount = period === 'day' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 7;
+                const days: DayStats[] = [];
+
+                for (let i = dayCount - 1; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    const dateStr = date.toISOString().split('T')[0];
+                    const realData = rangeStats.find((s: { date: string }) => s.date === dateStr);
+
+                    days.push({
+                        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                        focusMinutes: realData?.focusMinutes || 0,
+                        distractions: realData?.distractions || 0,
+                        sessions: realData?.sessions || 0,
+                    });
+                }
+
+                setWeekData(days);
             }
-
-            const startStr = startDate.toISOString().split('T')[0];
-            const endStr = today.toISOString().split('T')[0];
-
-            // Fetch real data from the store
-            const rangeStats = await window.wakey.getStatsRange(startStr, endStr);
-
-            // Build complete date range (fill in missing days with zero values)
-            const days: DayStats[] = [];
-            const dayCount = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-
-            for (let i = dayCount - 1; i >= 0; i--) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
-                const dateStr = date.toISOString().split('T')[0];
-
-                // Find real data for this date
-                const realData = rangeStats.find((s: { date: string }) => s.date === dateStr);
-
-                days.push({
-                    date: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                    focusMinutes: realData?.focusMinutes || 0,
-                    distractions: realData?.distractions || 0,
-                    sessions: realData?.sessions || 0,
-                });
-            }
-
-            setWeekData(days);
         } catch (error) {
-            console.error('Failed to load analytics data:', error);
-            // Fallback to empty data
-            setWeekData([]);
+            console.error('Failed to load enhanced analytics:', error);
         }
     };
 
@@ -118,6 +175,9 @@ export default function AnalyticsPage() {
                 totalDistractions: weekData.reduce((sum, d) => sum + d.distractions, 0),
             },
             dailyData: weekData,
+            topApps,
+            topWebsites,
+            categoryBreakdown: categoryData,
         }, 'wakey-analytics');
         setShowExportMenu(false);
     };
@@ -127,9 +187,8 @@ export default function AnalyticsPage() {
         setShowExportMenu(false);
     };
 
-    const maxFocus = Math.max(...weekData.map(d => d.focusMinutes), 1);
-    const totalWeekFocus = weekData.reduce((sum, d) => sum + d.focusMinutes, 0);
-    const avgDailyFocus = Math.round(totalWeekFocus / 7);
+    const totalFocus = weekData.reduce((sum, d) => sum + d.focusMinutes, 0);
+    const avgDailyFocus = weekData.length > 0 ? Math.round(totalFocus / weekData.length) : 0;
 
     const formatTime = (minutes: number) => {
         const h = Math.floor(minutes / 60);
@@ -137,6 +196,22 @@ export default function AnalyticsPage() {
         if (h === 0) return `${m}m`;
         return `${h}h ${m}m`;
     };
+
+    // Prepare chart data
+    const lineChartData = weekData.map(d => ({
+        name: d.date,
+        value: d.focusMinutes,
+    }));
+
+    const productiveChartData = [
+        { name: 'Productive', value: productiveData.productive, color: CHART_COLORS.productive },
+        { name: 'Distracting', value: productiveData.distracting, color: CHART_COLORS.distracting },
+    ].filter(d => d.value > 0);
+
+    const categoryChartData = categoryData.map(c => ({
+        name: c.name,
+        value: c.minutes,
+    }));
 
     return (
         <div className="space-y-6" id="analytics-content">
@@ -149,7 +224,7 @@ export default function AnalyticsPage() {
 
                 <div className="flex items-center gap-3">
                     <div className="flex bg-dark-800 rounded-lg p-1">
-                        {(['day', 'week', 'month'] as const).map((p) => (
+                        {(['day', 'week', 'month', 'all'] as const).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPeriod(p)}
@@ -158,7 +233,7 @@ export default function AnalyticsPage() {
                                     : 'text-dark-400 hover:text-white'
                                     }`}
                             >
-                                {p.charAt(0).toUpperCase() + p.slice(1)}
+                                {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
                             </button>
                         ))}
                     </div>
@@ -211,8 +286,12 @@ export default function AnalyticsPage() {
                         </div>
                         <span className="text-dark-400 text-sm">Total Focus</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">{formatTime(totalWeekFocus)}</div>
-                    <div className="text-xs text-dark-500 mt-1">This week</div>
+                    <div className="text-2xl font-bold text-white">
+                        {formatTime(period === 'all' && allTimeStats ? allTimeStats.totalFocusMinutes : totalFocus)}
+                    </div>
+                    <div className="text-xs text-dark-500 mt-1">
+                        {period === 'all' ? `${allTimeStats?.totalDays || 0} days tracked` : `This ${period}`}
+                    </div>
                 </div>
 
                 <div className="bg-dark-800 rounded-xl p-4 border border-dark-700">
@@ -234,7 +313,7 @@ export default function AnalyticsPage() {
                         <span className="text-dark-400 text-sm">Sessions</span>
                     </div>
                     <div className="text-2xl font-bold text-white">
-                        {weekData.reduce((sum, d) => sum + d.sessions, 0)}
+                        {period === 'all' && allTimeStats ? allTimeStats.completedSessions : weekData.reduce((sum, d) => sum + d.sessions, 0)}
                     </div>
                     <div className="text-xs text-dark-500 mt-1">Completed</div>
                 </div>
@@ -242,97 +321,186 @@ export default function AnalyticsPage() {
                 <div className="bg-dark-800 rounded-xl p-4 border border-dark-700">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-2 bg-yellow-500/20 rounded-lg">
-                            <TrendingUp className="w-5 h-5 text-yellow-400" />
+                            {weekComparison && weekComparison.change.focusPercent >= 0 ? (
+                                <TrendingUp className="w-5 h-5 text-green-400" />
+                            ) : (
+                                <TrendingDown className="w-5 h-5 text-red-400" />
+                            )}
                         </div>
-                        <span className="text-dark-400 text-sm">Focus Score</span>
+                        <span className="text-dark-400 text-sm">vs Last Week</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">
-                        {Math.max(0, 100 - stats.distractions * 5)}%
+                    <div className="flex items-center gap-2">
+                        <div className={`text-2xl font-bold ${weekComparison && weekComparison.change.focusPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {weekComparison ? `${weekComparison.change.focusPercent >= 0 ? '+' : ''}${weekComparison.change.focusPercent}%` : '0%'}
+                        </div>
+                        {weekComparison && weekComparison.change.focusPercent >= 0 ? (
+                            <ArrowUp className="w-4 h-4 text-green-400" />
+                        ) : (
+                            <ArrowDown className="w-4 h-4 text-red-400" />
+                        )}
                     </div>
-                    <div className="text-xs text-dark-500 mt-1">Today</div>
+                    <div className="text-xs text-dark-500 mt-1">Focus time change</div>
                 </div>
             </div>
 
-            {/* Focus Chart */}
-            <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-                <h2 className="text-lg font-semibold text-white mb-4">Weekly Focus Time</h2>
-
-                <div className="flex items-end gap-2 h-48">
-                    {weekData.map((day, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                            <div className="w-full flex flex-col justify-end h-40">
-                                <div
-                                    className="w-full bg-gradient-to-t from-primary-500 to-primary-400 rounded-t-lg transition-all duration-500"
-                                    style={{ height: `${(day.focusMinutes / maxFocus) * 100}%` }}
-                                />
-                            </div>
-                            <span className="text-xs text-dark-400">{day.date}</span>
-                            <span className="text-xs text-dark-500">{formatTime(day.focusMinutes)}</span>
-                        </div>
-                    ))}
+            {/* Focus Trend & Productive vs Distracting */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <AnimatedLineChart
+                        data={lineChartData}
+                        title="Focus Time Trend"
+                        height={250}
+                        lineColor={CHART_COLORS.primary}
+                    />
                 </div>
-            </div>
 
-            {/* App Usage & Distractions */}
-            <div className="grid grid-cols-2 gap-4">
-                {/* Top Apps */}
                 <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-                    <h2 className="text-lg font-semibold text-white mb-4">Top Apps Today</h2>
+                    <AnimatedPieChart
+                        data={productiveChartData}
+                        title="Productive vs Distracting"
+                        height={250}
+                        innerRadius={50}
+                    />
+                </div>
+            </div>
 
-                    {stats.topApps.length === 0 ? (
-                        <p className="text-dark-400 text-sm">No activity recorded yet</p>
+            {/* Top Apps & Top Websites */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Monitor className="w-5 h-5 text-primary-400" />
+                        <h2 className="text-lg font-semibold text-white">Top 10 Apps</h2>
+                    </div>
+                    {topApps.length === 0 ? (
+                        <p className="text-dark-400 text-sm">No app activity recorded yet</p>
                     ) : (
-                        <div className="space-y-3">
-                            {stats.topApps.slice(0, 5).map((app, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    <span className="text-dark-500 text-sm w-6">{i + 1}.</span>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-white text-sm">{app.app}</span>
-                                            <span className="text-dark-400 text-sm">{app.minutes}m</span>
-                                        </div>
-                                        <div className="h-2 bg-dark-700 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-primary-500 rounded-full"
-                                                style={{ width: `${(app.minutes / (stats.topApps[0]?.minutes || 1)) * 100}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <AnimatedBarChart
+                            data={topApps.map(a => ({
+                                name: a.name,
+                                value: a.minutes,
+                                color: a.isDistraction ? CHART_COLORS.distracting : CHART_COLORS.primary,
+                            }))}
+                            horizontal
+                            height={300}
+                        />
                     )}
                 </div>
 
-                {/* Distraction Summary */}
                 <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-                    <h2 className="text-lg font-semibold text-white mb-4">Distraction Summary</h2>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Globe className="w-5 h-5 text-primary-400" />
+                        <h2 className="text-lg font-semibold text-white">Top 10 Websites</h2>
+                    </div>
+                    {topWebsites.length === 0 ? (
+                        <p className="text-dark-400 text-sm">No website activity recorded yet</p>
+                    ) : (
+                        <AnimatedBarChart
+                            data={topWebsites.map(w => ({
+                                name: w.name,
+                                value: w.minutes,
+                                color: w.isDistraction ? CHART_COLORS.distracting : CHART_COLORS.primary,
+                            }))}
+                            horizontal
+                            height={300}
+                        />
+                    )}
+                </div>
+            </div>
 
-                    <div className="space-y-4">
-                        <div className="text-center py-8">
-                            <div className="text-5xl font-bold text-white mb-2">
-                                {stats.distractions}
+            {/* Category Breakdown & Heatmap */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <AnimatedPieChart
+                        data={categoryChartData}
+                        title="Time by Category"
+                        height={300}
+                        showLegend
+                    />
+                </div>
+
+                <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <HeatmapChart
+                        data={heatmapData}
+                        title="Activity Heatmap"
+                        height={300}
+                        colorScale="teal"
+                    />
+                </div>
+            </div>
+
+            {/* Week Comparison */}
+            {weekComparison && (
+                <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Calendar className="w-5 h-5 text-primary-400" />
+                        <h2 className="text-lg font-semibold text-white">Week-over-Week Comparison</h2>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">This Week Focus</div>
+                            <div className="text-2xl font-bold text-white">
+                                {formatTime(weekComparison.thisWeek.focusMinutes)}
                             </div>
-                            <div className="text-dark-400">Distractions today</div>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-4 text-center">
-                            <div className="bg-dark-900 rounded-lg p-3">
-                                <div className="text-xl font-semibold text-white">
-                                    {weekData.reduce((sum, d) => sum + d.distractions, 0)}
-                                </div>
-                                <div className="text-xs text-dark-400">This week</div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Last Week Focus</div>
+                            <div className="text-2xl font-bold text-white">
+                                {formatTime(weekComparison.lastWeek.focusMinutes)}
                             </div>
-                            <div className="bg-dark-900 rounded-lg p-3">
-                                <div className="text-xl font-semibold text-white">
-                                    {Math.round(weekData.reduce((sum, d) => sum + d.distractions, 0) / 7)}
-                                </div>
-                                <div className="text-xs text-dark-400">Daily avg</div>
+                        </div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">This Week Distractions</div>
+                            <div className="text-2xl font-bold text-white">
+                                {weekComparison.thisWeek.distractions}
+                            </div>
+                        </div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Distraction Change</div>
+                            <div className={`text-2xl font-bold ${weekComparison.change.distractionsPercent <= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {weekComparison.change.distractionsPercent <= 0 ? '' : '+'}{weekComparison.change.distractionsPercent}%
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* All Time Stats */}
+            {period === 'all' && allTimeStats && (
+                <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                    <h2 className="text-lg font-semibold text-white mb-4">All Time Statistics</h2>
+                    <div className="grid grid-cols-4 gap-4">
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Total Focus Time</div>
+                            <div className="text-2xl font-bold text-primary-400">
+                                {formatTime(allTimeStats.totalFocusMinutes)}
+                            </div>
+                        </div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Total Sessions</div>
+                            <div className="text-2xl font-bold text-white">
+                                {allTimeStats.completedSessions}
+                            </div>
+                        </div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Avg Quality</div>
+                            <div className="text-2xl font-bold text-white">
+                                {allTimeStats.avgQuality}%
+                            </div>
+                        </div>
+                        <div className="bg-dark-900 rounded-lg p-4 text-center">
+                            <div className="text-dark-400 text-sm mb-1">Days Tracked</div>
+                            <div className="text-2xl font-bold text-white">
+                                {allTimeStats.totalDays}
+                            </div>
+                        </div>
+                    </div>
+                    {allTimeStats.firstDate && allTimeStats.lastDate && (
+                        <div className="mt-4 text-center text-dark-500 text-sm">
+                            Tracking since {new Date(allTimeStats.firstDate).toLocaleDateString()} to {new Date(allTimeStats.lastDate).toLocaleDateString()}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
