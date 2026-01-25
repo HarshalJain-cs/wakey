@@ -5,9 +5,41 @@ interface TitleBarProps {
 }
 
 export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
-    const handleMinimize = () => window.wakey?.minimize();
-    const handleMaximize = () => window.wakey?.maximize();
-    const handleClose = () => window.wakey?.close();
+    const handleMinimize = async () => {
+        try {
+            if (window.wakey?.minimize) {
+                await window.wakey.minimize();
+            } else {
+                console.error('Wakey API not available for minimize');
+            }
+        } catch (error) {
+            console.error('Failed to minimize window:', error);
+        }
+    };
+
+    const handleMaximize = async () => {
+        try {
+            if (window.wakey?.maximize) {
+                await window.wakey.maximize();
+            } else {
+                console.error('Wakey API not available for maximize');
+            }
+        } catch (error) {
+            console.error('Failed to maximize window:', error);
+        }
+    };
+
+    const handleClose = async () => {
+        try {
+            if (window.wakey?.close) {
+                await window.wakey.close();
+            } else {
+                console.error('Wakey API not available for close');
+            }
+        } catch (error) {
+            console.error('Failed to close window:', error);
+        }
+    };
 
     return (
         <div className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800" style={{ webkitAppRegion: 'drag' } as React.CSSProperties}>

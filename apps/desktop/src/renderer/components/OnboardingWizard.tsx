@@ -242,6 +242,11 @@ export default function OnboardingWizard({ onComplete, onSkip }: OnboardingWizar
                 await window.wakey.setSetting('groqApiKey', groqApiKey);
             }
             await window.wakey.setSetting('onboardingComplete', true);
+
+            // Start tracking immediately if user enabled it
+            if (autoTrack) {
+                await window.wakey.setTrackingStatus(true);
+            }
         } catch (error) {
             console.error('Failed to save onboarding settings:', error);
         }

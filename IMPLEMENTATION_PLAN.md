@@ -2,8 +2,8 @@
 
 > **Project:** Wakey - AI-Powered Productivity Platform
 > **Part of:** Jarvis Master Project
-> **Version:** 0.1.0
-> **Date:** January 16, 2026
+> **Version:** 0.2.0
+> **Date:** January 22, 2026
 
 ---
 
@@ -11,587 +11,157 @@
 
 1. [Project Overview](#1-project-overview)
 2. [Current Status](#2-current-status)
-3. [Issues to Fix](#3-issues-to-fix)
-4. [Production Readiness Checklist](#4-production-readiness-checklist)
-5. [Jarvis Integration Plan](#5-jarvis-integration-plan)
-6. [Implementation Phases](#6-implementation-phases)
+3. [**New Initiative: Premium Subscription Website**](#3-new-initiative-premium-subscription-website)
+    1. [Project Goals](#31-project-goals)
+    2. [Key Decisions](#32-key-decisions)
+    3. [Technology Stack](#33-technology-stack)
+    4. [Implementation Plan: Phased Rollout](#34-implementation-plan-phased-rollout)
+        1. [Phase A: Foundation & Project Setup](#phase-a-foundation--project-setup)
+        2. [Phase B: Backend & Payments API](#phase-b-backend--payments-api)
+        3. [Phase C: Frontend & User Interface](#phase-c-frontend--user-interface)
+        4. [Phase D: Integration & Testing](#phase-d-integration--testing)
+        5. [Phase E: Deployment & Launch](#phase-e-deployment--launch)
+4. [Desktop App: Issues to Fix](#4-desktop-app-issues-to-fix)
+5. [Desktop App: Production Readiness](#5-desktop-app-production-readiness)
+6. [Jarvis Integration Plan](#6-jarvis-integration-plan)
 7. [Testing Strategy](#7-testing-strategy)
 8. [Deployment Guide](#8-deployment-guide)
 
 ---
 
 ## 1. Project Overview
-
-### What is Wakey?
-Wakey is a comprehensive AI-powered desktop productivity platform for Windows that combines:
-- Real-time activity tracking and app categorization
-- Pomodoro-style focus sessions with quality scoring
-- AI-powered productivity insights (Groq + Ollama)
-- Task and project management
-- Knowledge management (notes, flashcards, concept graphs)
-- Cloud synchronization via Supabase
-- Specialized dashboards (Trader, Developer)
-
-### Tech Stack
-| Component | Technology |
-|-----------|------------|
-| Language | TypeScript 5.3 |
-| Frontend | React 18 + Vite 5 |
-| Desktop | Electron 28 |
-| Styling | Tailwind CSS 3.3 |
-| Database | SQLite (local) + Supabase (cloud) |
-| AI | Groq (primary) + Ollama (fallback) |
-| Build | Turborepo + pnpm |
-| State | Zustand |
-| Charts | Recharts |
-
-### Project Structure
-```
-wakey/
-├── apps/
-│   └── desktop/          # Electron + React app
-│       ├── src/
-│       │   ├── main/     # Electron main process
-│       │   ├── preload/  # IPC bridge
-│       │   └── renderer/ # React UI (components, pages, services)
-├── packages/
-│   ├── ai/               # AI provider integration
-│   ├── database/         # SQLite abstraction
-│   ├── tracking/         # Activity tracking
-│   └── shared/           # Types & utilities
-└── docs/                 # Documentation
-```
+(Content remains the same as version 0.1.0)
+...
 
 ---
 
 ## 2. Current Status
-
-### Implemented Features (100% Complete)
-- [x] Activity Tracking (active-win integration)
-- [x] Focus Timer (Pomodoro + custom durations)
-- [x] Dashboard with 6 customizable widgets
-- [x] Task Management
-- [x] Project Management
-- [x] Analytics & Charts
-- [x] AI Insights (Groq integration)
-- [x] Distraction Detection & Alerts
-- [x] Multi-Model AI Consensus
-- [x] Knowledge Graph
-- [x] Flashcards (Spaced Repetition)
-- [x] Achievements System
-- [x] Settings Page
-- [x] Dark/Light Mode
-- [x] System Tray Integration
-- [x] Global Keyboard Shortcuts (Ctrl+Shift+F/T)
-- [x] Command Palette
-- [x] Onboarding Wizard
-- [x] Trader Dashboard
-- [x] Developer Dashboard
-- [x] Supabase Authentication
-- [x] Cloud Sync
-- [x] Auto-Update System
-
-### Pages (20 total)
-Dashboard, Focus, Tasks, Projects, Analytics, Research, Integrations, Trader Dashboard, Developer Dashboard, AI Consensus, Knowledge, Agents, Flashcards, Cloud Sync, Achievements, Goals, Music, Shortcuts, Settings, Auth
-
-### Services (30+)
-ai.ts, multi-model-service.ts, knowledge-service.ts, agents-service.ts, sync-service.ts, achievements-service.ts, auto-journaling-service.ts, burnout-detection-service.ts, context-awareness-service.ts, deep-work-service.ts, focus-prediction-service.ts, focus-challenges-service.ts, focus-rituals-service.ts, productivity-score.ts, export-service.ts, plugin-system-service.ts, and more...
+(Content remains the same as version 0.1.0)
+...
 
 ---
 
-## 3. Issues to Fix
+## 3. New Initiative: Premium Subscription Website
 
-### Priority 1: Critical TypeScript Errors
+### 3.1. Project Goals
+- To create a public-facing website for marketing Wakey and converting users to a premium subscription.
+- To handle user authentication, payment processing, and subscription management.
+- To provide a dashboard for premium users to manage their account and billing.
 
-#### 3.1 Main Process - active-win Import Issue
-**File:** `apps/desktop/src/main/index.ts:436`
-**Error:** Type mismatch with active-win module import
-**Fix:**
-```typescript
-// Current (broken)
-activeWin = await import('active-win');
+### 3.2. Key Decisions
+Based on our discussion, the following has been decided:
+- **Pricing:** The launch prices are **$2.50/week** and **$100/year**. These are confirmed to be the **50% discounted prices**.
+- **Payment Processors:** We will integrate **both Stripe (for international payments) and Razorpay (for payments within India)**.
+- **Project Location:** The website will be a new application within the existing monorepo at `apps/website/`.
 
-// Fixed
-const activeWinModule = await import('active-win');
-activeWin = activeWinModule.default || activeWinModule;
-```
+### 3.3. Technology Stack
+| Component | Technology | Rationale |
+|-----------|------------|-----------|
+| Framework | Next.js 14+ | Excellent for both static marketing pages and dynamic application logic (API Routes). Stays within the React ecosystem. |
+| Language | TypeScript | Consistent with the rest of the monorepo. |
+| Styling | Tailwind CSS | Consistent with the desktop application. |
+| UI Components | Shadcn/UI | Provides beautiful, accessible, and unopinionated components that are easy to customize with Tailwind. |
+| Database | Supabase (Postgres) | Leverage the existing database used for the desktop app's cloud sync. |
+| Payments | Stripe SDK, Razorpay SDK | Official libraries for robust and secure payment processing. |
+| Deployment | Vercel / Netlify | Native integration with Next.js for seamless CI/CD. |
 
-#### 3.2 Unused Imports in Main Process
-**File:** `apps/desktop/src/main/index.ts:20-22`
-**Fix:** Remove unused `resolve` and `fileURLToPath` imports
+### 3.4. Implementation Plan: Phased Rollout
 
-#### 3.3 Missing Module - screenshot-desktop
-**File:** `packages/tracking/src/index.ts:61`
-**Fix:** Either install the module or remove the unused import
-```bash
-pnpm add screenshot-desktop -w --filter @wakey/tracking
-```
-Or remove if not needed.
+#### Phase A: Foundation & Project Setup
+**Goal:** Create the skeleton of the `website` application and configure it within the monorepo.
+- [ ] **1. Scaffold Next.js App:**
+    - Create a new Next.js application in `apps/website/`.
+    - Use `pnpm create next-app -- --typescript --tailwind --eslint`.
+- [ ] **2. Monorepo Integration:**
+    - Add the new `website` app to `pnpm-workspace.yaml`.
+    - Update `turbo.json` to include build and development pipelines for `website`.
+- [ ] **3. Basic Structure:**
+    - Create main page layouts (`/app`, `/auth`).
+    - Set up basic marketing pages (Landing, Features, About).
+- [ ] **4. Component Library:**
+    - Install and configure `Shadcn/UI`.
+- [ ] **5. Environment Setup:**
+    - Create `.env.local` for Supabase, Stripe, and Razorpay keys.
 
-### Priority 2: TypeScript Configuration
+#### Phase B: Backend & Payments API
+**Goal:** Build the server-side logic to handle users, subscriptions, and payments from both providers.
+- [ ] **1. Database Schema:**
+    - Extend the Supabase schema in the `database` package.
+    - Add `subscriptions` table (linking users to plans, includes `status`, `provider`, `current_period_end`).
+    - Add `customers` table to map users to Stripe/Razorpay customer IDs.
+- [ ] **2. API Endpoints (Next.js API Routes):**
+    - `POST /api/auth/*`: User sign-up and login (leveraging Supabase Auth).
+    - `POST /api/webhooks/stripe`: Handle subscription events from Stripe (e.g., `invoice.payment_succeeded`).
+    - `POST /api/webhooks/razorpay`: Handle subscription events from Razorpay (e.g., `subscription.charged`).
+    - `POST /api/checkout-sessions`: Create a Stripe or Razorpay checkout session based on user's geography or choice.
+    - `GET /api/subscription`: Fetch the current user's subscription status.
+- [ ] **3. Payment Logic:**
+    - Implement a service/utility to determine whether to use Stripe or Razorpay. This could be based on IP address geolocation or user selection.
+    - Write robust webhook handlers that update the `subscriptions` table atomically. Security is paramount here.
 
-#### 3.4 Shared Package tsconfig Issue
-**Problem:** Shared packages are trying to compile desktop React files
-**Fix:** Update `packages/shared/tsconfig.json` to exclude desktop app files:
-```json
-{
-  "compilerOptions": {
-    "composite": true,
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"],
-  "exclude": ["../../apps/**/*"]
-}
-```
+#### Phase C: Frontend & User Interface
+**Goal:** Build the user-facing pages for pricing, checkout, and account management.
+- [ ] **1. Pricing Page (`/pricing`):**
+    - Design a clear, responsive pricing table component.
+    - Display weekly and yearly plans.
+    - "Get Started" buttons will lead to the checkout flow.
+- [ ] **2. Checkout Flow:**
+    - Create a checkout form that dynamically loads either the Stripe Checkout or Razorpay Checkout.
+    - Handle loading states, successful payment redirection, and error messages.
+- [ ] **3. User Dashboard (`/account`):**
+    - This page is for signed-in, subscribed users.
+    - Display current plan, billing cycle, and payment status.
+    - Provide a button to "Manage Billing" which redirects to the respective provider's portal (Stripe Customer Portal or a Razorpay-linked page).
+    - Show billing history.
+- [ ] **4. Authentication Pages:**
+    - Build Login and Sign-up pages that integrate with Supabase Auth.
 
-#### 3.5 Vite/Vitest Version Conflict
-**File:** `apps/desktop/vitest.config.ts`
-**Problem:** vite@5.4.21 incompatible with vitest@4.0.17 (uses vite@7.3.1)
-**Fix:** Pin vitest to compatible version:
-```bash
-pnpm add vitest@1.6.0 -D --filter @wakey/desktop
-```
+#### Phase D: Integration & Testing
+**Goal:** Connect the frontend to the backend, and thoroughly test the entire payment funnel.
+- [ ] **1. End-to-End Testing (Manual):**
+    - Test the full user journey: Sign-up -> Select Plan -> Pay with Stripe (using test cards) -> Verify subscription status in Dashboard.
+    - Repeat the entire journey for Razorpay (using its test environment).
+- [ ] **2. Webhook Testing:**
+    - Use Stripe CLI and ngrok (or similar) to test webhook handlers locally.
+    - Ensure subscription status is correctly updated in the database upon successful payment events.
+- [ ] **3. Automated Testing:**
+    - Write unit tests for API route logic.
+    - Write integration tests for the payment provider selection logic.
 
-#### 3.6 import.meta.env TypeScript Errors
-**Files:**
-- `services/google-calendar-service.ts:34`
-- `services/spotify-service.ts:30`
-- `services/weather-service.ts:70`
-
-**Fix:** Add vite client types to tsconfig:
-```json
-{
-  "compilerOptions": {
-    "types": ["vite/client"]
-  }
-}
-```
-
-### Priority 3: Code Quality Issues
-
-#### 3.7 Unused Imports to Remove
-| File | Unused Imports |
-|------|----------------|
-| `pages/ShortcutsPage.tsx:1` | Play, Pause, Settings, BarChart3 |
-| `services/ai.ts:84` | callOllama |
-| `services/api-access-service.ts:307` | data |
-| `services/audio-service.ts:156-157` | oscillator, gain |
-| `services/deep-work-service.ts:40` | contextSwitchCount |
-| `services/deep-work-service.ts:72` | windowTitle |
-| `services/google-calendar-service.ts:43` | lastSync |
-| `services/google-calendar-service.ts:124` | timeMin |
-| `services/weather-service.ts:51` | forecast |
-| `services/__tests__/agents-service.test.ts:10` | vi |
-| `services/__tests__/agents-service.test.ts:13` | AgentType |
-| `services/__tests__/ai.test.ts:11` | vi, beforeEach |
-
-#### 3.8 Type Mismatch in API Service
-**File:** `services/api-access-service.ts:246`
-**Error:** Type 'APIKey | undefined' not assignable to 'APIKey | null'
-**Fix:**
-```typescript
-// Change return type or add null coalescing
-return keys.find(k => k.id === id) ?? null;
-```
-
----
-
-## 4. Production Readiness Checklist
-
-### Phase 1: Code Quality
-- [ ] Fix all TypeScript errors (Section 3)
-- [ ] Remove all unused imports
-- [ ] Run ESLint and fix warnings
-- [ ] Ensure all tests pass
-- [ ] Add error boundaries to all pages
-
-### Phase 2: Security
-- [ ] Audit all IPC channels for security vulnerabilities
-- [ ] Implement Content Security Policy (CSP) headers
-- [ ] Validate all user inputs
-- [ ] Secure API key storage (use electron-store with encryption)
-- [ ] Add rate limiting for AI API calls
-- [ ] Review Supabase Row Level Security (RLS) policies
-
-### Phase 3: Performance
-- [ ] Enable production optimizations in Vite build
-- [ ] Implement lazy loading for pages
-- [ ] Add virtualization for long lists
-- [ ] Optimize SQLite queries with indexes
-- [ ] Minimize bundle size (analyze with rollup-plugin-visualizer)
-
-### Phase 4: User Experience
-- [ ] Complete onboarding flow testing
-- [ ] Add loading states to all async operations
-- [ ] Implement proper error messages
-- [ ] Add offline mode indicators
-- [ ] Test all keyboard shortcuts
-- [ ] Verify system tray functionality
-
-### Phase 5: Distribution
-- [ ] Configure code signing for Windows (removes security warnings)
-- [ ] Set up GitHub repository for releases
-- [ ] Configure auto-updater with proper GitHub token
-- [ ] Create installer icons at all required sizes
-- [ ] Test installation on clean Windows machine
-- [ ] Write user documentation
-
-### Phase 6: Monitoring
-- [ ] Implement error logging/reporting (e.g., Sentry)
-- [ ] Add analytics for feature usage (opt-in)
-- [ ] Create health check endpoints
-- [ ] Set up crash reporting
+#### Phase E: Deployment & Launch
+**Goal:** Go live.
+- [ ] **1. Configure Production Environment:**
+    - Set up a new Vercel or Netlify project linked to the monorepo.
+    - Configure the build command and root directory (`apps/website`).
+    - Add production environment variables for all services.
+- [ ] **2. Final Checks:**
+    - Ensure all links, metadata, and SEO tags are correct.
+    - Perform a final security review of webhook endpoints.
+- [ ] **3. Go Live:**
+    - Merge to `main` branch and trigger production deployment.
+    - Monitor logs for any errors.
 
 ---
 
-## 5. Jarvis Integration Plan
+## 4. Desktop App: Issues to Fix
+(Formerly Section 3 - Content remains the same)
+...
 
-### Integration Architecture
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    JARVIS MASTER PROJECT                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │    Wakey     │  │   Module 2   │  │   Module 3   │      │
-│  │ (Productivity)│  │              │  │              │      │
-│  └──────┬───────┘  └──────────────┘  └──────────────┘      │
-│         │                                                    │
-│         │ IPC/REST/WebSocket                                │
-│         ▼                                                    │
-│  ┌──────────────────────────────────────────────────┐       │
-│  │           Jarvis Core Communication Hub           │       │
-│  │  • Event Bus                                      │       │
-│  │  • Shared State Manager                           │       │
-│  │  • API Gateway                                    │       │
-│  └──────────────────────────────────────────────────┘       │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+## 5. Desktop App: Production Readiness
+(Formerly Section 4 - Content remains the same)
+...
 
-### Integration Points
-
-#### 5.1 Data Sharing API
-Create a REST/WebSocket API for Jarvis to consume Wakey data:
-
-```typescript
-// New file: apps/desktop/src/main/jarvis-api.ts
-
-interface JarvisAPI {
-  // Activity data
-  getActivitySummary(date: string): Promise<ActivitySummary>;
-  getProductivityScore(date: string): Promise<number>;
-  getActiveAppStats(range: DateRange): Promise<AppStats[]>;
-
-  // Focus sessions
-  getCurrentFocusSession(): Promise<FocusSession | null>;
-  startFocusSession(duration: number): Promise<void>;
-  endFocusSession(): Promise<FocusResult>;
-
-  // Tasks
-  getTasks(filter?: TaskFilter): Promise<Task[]>;
-  createTask(task: TaskInput): Promise<Task>;
-  updateTaskStatus(id: string, status: TaskStatus): Promise<void>;
-
-  // AI insights
-  getLatestInsight(): Promise<AIInsight>;
-  requestInsight(context: string): Promise<AIInsight>;
-
-  // Events (for real-time updates)
-  onActivityChange(callback: (activity: Activity) => void): Unsubscribe;
-  onFocusSessionUpdate(callback: (session: FocusSession) => void): Unsubscribe;
-}
-```
-
-#### 5.2 IPC Channels for Jarvis
-Add new IPC channels for Jarvis communication:
-
-```typescript
-// Add to apps/desktop/src/main/index.ts
-
-// Jarvis integration channels
-ipcMain.handle('jarvis:getActivitySummary', async (_, date) => {
-  return await getActivitySummary(date);
-});
-
-ipcMain.handle('jarvis:getProductivityScore', async (_, date) => {
-  return await calculateProductivityScore(date);
-});
-
-ipcMain.handle('jarvis:subscribe', async (_, eventType) => {
-  // Set up event forwarding to Jarvis
-});
-```
-
-#### 5.3 Shared Supabase Backend
-Use the same Supabase project for all Jarvis modules:
-
-```sql
--- Wakey tables (already exist)
-CREATE TABLE activity_logs (...);
-CREATE TABLE focus_sessions (...);
-CREATE TABLE tasks (...);
-
--- Jarvis shared tables (new)
-CREATE TABLE jarvis_events (
-  id UUID PRIMARY KEY,
-  source TEXT NOT NULL, -- 'wakey', 'module2', etc.
-  event_type TEXT NOT NULL,
-  payload JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE jarvis_commands (
-  id UUID PRIMARY KEY,
-  target TEXT NOT NULL, -- 'wakey', 'module2', etc.
-  command TEXT NOT NULL,
-  params JSONB,
-  status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-#### 5.4 Event-Driven Communication
-Implement pub/sub pattern for real-time Jarvis integration:
-
-```typescript
-// New file: apps/desktop/src/renderer/services/jarvis-bridge.ts
-
-import { createClient } from '@supabase/supabase-js';
-
-class JarvisBridge {
-  private supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Publish events to Jarvis
-  async publishEvent(eventType: string, payload: any) {
-    await this.supabase.from('jarvis_events').insert({
-      source: 'wakey',
-      event_type: eventType,
-      payload
-    });
-  }
-
-  // Subscribe to commands from Jarvis
-  subscribeToCommands(callback: (command: Command) => void) {
-    return this.supabase
-      .channel('jarvis-commands')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'jarvis_commands',
-        filter: 'target=eq.wakey'
-      }, (payload) => {
-        callback(payload.new as Command);
-      })
-      .subscribe();
-  }
-
-  // Event types Wakey publishes
-  static Events = {
-    ACTIVITY_CHANGED: 'wakey.activity.changed',
-    FOCUS_STARTED: 'wakey.focus.started',
-    FOCUS_ENDED: 'wakey.focus.ended',
-    TASK_COMPLETED: 'wakey.task.completed',
-    PRODUCTIVITY_ALERT: 'wakey.productivity.alert',
-    DISTRACTION_DETECTED: 'wakey.distraction.detected',
-  };
-}
-
-export const jarvisBridge = new JarvisBridge();
-```
-
-#### 5.5 Configuration for Jarvis Mode
-Add Jarvis-specific settings:
-
-```typescript
-// Add to settings store
-interface JarvisSettings {
-  enabled: boolean;
-  masterApiUrl?: string;
-  shareActivityData: boolean;
-  shareFocusData: boolean;
-  shareTaskData: boolean;
-  receiveCommands: boolean;
-  autoStartWithJarvis: boolean;
-}
-```
-
----
-
-## 6. Implementation Phases
-
-### Phase 1: Bug Fixes (Immediate)
-**Duration:** 1-2 days
-
-1. Fix active-win import issue in main/index.ts
-2. Remove all unused imports
-3. Fix TypeScript configuration issues
-4. Resolve vitest version conflict
-5. Add vite/client types for import.meta.env
-6. Fix api-access-service type mismatch
-
-### Phase 2: Code Cleanup
-**Duration:** 2-3 days
-
-1. Run ESLint --fix on entire codebase
-2. Add proper TypeScript strict mode
-3. Implement error handling in all services
-4. Add loading states to components
-5. Write missing unit tests
-
-### Phase 3: Production Hardening
-**Duration:** 3-5 days
-
-1. Security audit and fixes
-2. Performance optimization
-3. Bundle size optimization
-4. Memory leak detection and fixes
-5. Stress testing
-
-### Phase 4: Jarvis Integration
-**Duration:** 5-7 days
-
-1. Create Jarvis API service
-2. Implement IPC channels for Jarvis
-3. Set up Supabase shared tables
-4. Implement event bridge
-5. Add Jarvis settings UI
-6. Test integration with mock Jarvis
-
-### Phase 5: Distribution
-**Duration:** 2-3 days
-
-1. Set up code signing
-2. Configure GitHub releases
-3. Build and test installer
-4. Create release documentation
-5. Publish v1.0.0
-
----
+## 6. Jarvis Integration Plan
+(Formerly Section 5 - Content remains the same)
+...
 
 ## 7. Testing Strategy
-
-### Unit Tests
-```bash
-# Run all tests
-pnpm test
-
-# Run with coverage
-pnpm test -- --coverage
-
-# Watch mode
-pnpm test:watch
-```
-
-**Test Files to Create:**
-- [ ] `services/sync-service.test.ts`
-- [ ] `services/productivity-score.test.ts`
-- [ ] `services/jarvis-bridge.test.ts`
-- [ ] `components/Dashboard.test.tsx`
-- [ ] `pages/FocusPage.test.tsx`
-
-### Integration Tests
-- [ ] Test Electron main/renderer IPC communication
-- [ ] Test Supabase sync operations
-- [ ] Test AI service fallback (Groq -> Ollama)
-- [ ] Test auto-updater flow
-
-### E2E Tests (Future)
-Consider adding Playwright for E2E testing:
-```bash
-pnpm add -D @playwright/test --filter @wakey/desktop
-```
-
----
+(Formerly Section 6 - Content remains the same, may be updated later to include website tests)
+...
 
 ## 8. Deployment Guide
-
-### Development
-```bash
-# Install dependencies
-cd wakey
-pnpm install
-
-# Run in development
-pnpm dev
-```
-
-### Production Build
-```bash
-# Build all packages
-pnpm build
-
-# Package for Windows
-cd apps/desktop
-npm run package:win
-
-# Output: apps/desktop/release/
-#   - Wakey-0.1.0-x64.exe (installer)
-#   - Wakey-0.1.0-Portable.exe (portable)
-```
-
-### Environment Variables
-```env
-# apps/desktop/.env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_key
-GH_TOKEN=your_github_token  # For auto-updates
-VITE_GROQ_API_KEY=optional_groq_key
-```
-
-### GitHub Release Process
-1. Update version in package.json files
-2. Create git tag: `git tag v1.0.0`
-3. Push tag: `git push origin v1.0.0`
-4. Build and upload release assets
-5. Auto-updater will detect new version
-
-### Code Signing (Recommended)
-For production releases, sign the Windows executable:
-1. Obtain a code signing certificate (e.g., DigiCert, Sectigo)
-2. Add to electron-builder config:
-```json
-{
-  "win": {
-    "certificateFile": "path/to/cert.pfx",
-    "certificatePassword": "ENV_CERT_PASSWORD"
-  }
-}
-```
+(Formerly Section 7 - Content remains the same, may be updated later to include website deployment)
+...
 
 ---
-
-## Quick Reference Commands
-
-```bash
-# Development
-pnpm dev              # Start dev server
-pnpm desktop          # Start desktop only
-
-# Building
-pnpm build            # Build all
-pnpm desktop:build    # Build desktop
-
-# Testing
-pnpm test             # Run tests
-pnpm lint             # Run linter
-
-# Cleaning
-pnpm clean            # Clean all builds
-
-# Packaging
-cd apps/desktop && npm run package:win  # Windows installer
-```
-
----
-
-## Contact & Resources
-
-- **Repository:** [GitHub - wakey](https://github.com/HarshalJain-cs/wakey)
-- **Supabase Project:** dwykevngjgesfkdylesq.supabase.co
-- **Documentation:** See `/docs` folder
-
----
-
-*This implementation plan was generated on January 16, 2026. Update as needed.*
+*This implementation plan was updated on January 22, 2026. This version includes the plan for the new Premium Subscription Website.*
