@@ -31,7 +31,19 @@
       "Bash(pnpm typecheck:*)",
       "Bash(pnpm add:*)",
       "Bash(pnpm build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run typecheck:*)",
+      "Bash(findstr:*)",
+      "Bash(pnpm dev)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 6456 && taskkill /F /PID 22840 && taskkill /F /PID 11760\")",
+      "Bash(cmd.exe /c \"tasklist /FI \"\"PID eq 6456\"\"\")",
+      "Bash(cmd.exe /c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :8765 ^| findstr LISTENING''\\) do taskkill /F /PID %a\")",
+      "Bash(cmd.exe /c \"tasklist | findstr -i electron\")",
+      "Bash(powershell:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
