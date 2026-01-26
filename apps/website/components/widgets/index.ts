@@ -8,3 +8,5 @@ export { default as StreakWidget } from './StreakWidget';
 export { default as SpotifyWidget } from './SpotifyWidget';
 export { default as AIInsightsWidget } from './AIInsightsWidget';
 export { default as GoalsWidget } from './GoalsWidget';
+export { default as FocusTimerWidget } from './FocusTimerWidget';
+export { default as AchievementsWidget } from './AchievementsWidget';
