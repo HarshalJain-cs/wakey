@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX, Settings2, ChevronRight } from 'lucide-react';
-import { audioService } from '../services/audio-service';
-import { FocusPreset, pomodoroService, DEFAULT_PRESETS } from '../services/pomodoro-service';
+import { audioService, SoundEffect } from '../services/audio-service';
+import { FocusPreset, DEFAULT_PRESETS } from '../services/pomodoro-service';
 import CustomTimerModal from '../components/CustomTimerModal';
 
 interface TimerState {
@@ -186,7 +186,7 @@ export default function FocusPage() {
                 } else {
                     // All cycles completed
                     if (soundEnabled) {
-                        audioService.playEffect('session-complete');
+                        audioService.playEffect('timer-complete' as SoundEffect);
                         new Notification('All Cycles Complete!', {
                             body: `Great work! You completed ${timer.totalCycles} focus cycle${timer.totalCycles > 1 ? 's' : ''}.`,
                         });

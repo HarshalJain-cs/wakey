@@ -56,7 +56,7 @@ export default function StreakWidget() {
 
             // Check if today's goal is met
             const todayData = rangeStats.find((d: { date: string }) => d.date === todayStr);
-            const todayGoalMet = todayData?.focusMinutes >= dailyGoal;
+            const todayGoalMet = (todayData?.focusMinutes ?? 0) >= dailyGoal;
 
             // If today's goal not met, start from yesterday
             if (!todayGoalMet) {

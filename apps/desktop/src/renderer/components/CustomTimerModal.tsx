@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Clock, Coffee, Repeat, Save, Trash2 } from 'lucide-react';
-import { FocusPreset, pomodoroService, DEFAULT_PRESETS } from '../services/pomodoro-service';
+import { FocusPreset, pomodoroService } from '../services/pomodoro-service';
 
 interface CustomTimerModalProps {
     isOpen: boolean;

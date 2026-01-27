@@ -21,7 +21,7 @@ type Period = 'day' | 'week' | 'month' | 'all';
 export default function AnalyticsPage() {
     const [period, setPeriod] = useState<Period>('week');
     const [showExportMenu, setShowExportMenu] = useState(false);
-    const [stats, setStats] = useState({
+    const [_stats, setStats] = useState({
         focusTime: 0,
         sessions: 0,
         distractions: 0,

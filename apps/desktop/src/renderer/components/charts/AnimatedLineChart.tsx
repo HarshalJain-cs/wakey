@@ -24,8 +24,8 @@ interface AnimatedLineChartProps {
 export default function AnimatedLineChart({
     data,
     title,
-    xAxisLabel,
-    yAxisLabel,
+    xAxisLabel: _xAxisLabel,
+    yAxisLabel: _yAxisLabel,
     height = 300,
     lineColor = CHART_COLORS.primary,
     showArea = true,
@@ -33,7 +33,7 @@ export default function AnimatedLineChart({
     formatValue,
     dataKeys,
 }: AnimatedLineChartProps) {
-    const [isAnimated, setIsAnimated] = useState(false);
+    const [_isAnimated, setIsAnimated] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsAnimated(true), 100);

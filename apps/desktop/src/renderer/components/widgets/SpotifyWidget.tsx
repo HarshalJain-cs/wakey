@@ -11,7 +11,7 @@ interface SpotifyTrack {
 }
 
 export default function SpotifyWidget() {
-    const [track, setTrack] = useState<SpotifyTrack | null>(null);
+    const [track, _setTrack] = useState<SpotifyTrack | null>(null);
     const [connected, setConnected] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -34,7 +34,7 @@ export default function SpotifyWidget() {
 
     const handleConnect = () => {
         // Navigate to settings for Spotify connection
-        if (window.wakey?.onNavigate) {
+        if (window.wakey?.onNavigate !== undefined) {
             // This will be implemented when Spotify OAuth is ready
             console.log('Navigate to Spotify settings');
         }

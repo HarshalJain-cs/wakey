@@ -23,15 +23,15 @@ interface AnimatedBarChartProps {
 export default function AnimatedBarChart({
     data,
     title,
-    xAxisLabel,
-    yAxisLabel,
+    xAxisLabel: _xAxisLabel,
+    yAxisLabel: _yAxisLabel,
     horizontal = false,
     height = 300,
-    barColor = CHART_COLORS.primary,
+    barColor: _barColor = CHART_COLORS.primary,
     showGrid = true,
     formatValue,
 }: AnimatedBarChartProps) {
-    const [isAnimated, setIsAnimated] = useState(false);
+    const [_isAnimated, setIsAnimated] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsAnimated(true), 100);

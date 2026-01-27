@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { CHART_COLORS } from '../../constants/chart-colors';
 
 interface HeatmapData {
     day: string;      // Day of week (Mon, Tue, etc.)
