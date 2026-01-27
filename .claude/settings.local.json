@@ -45,7 +45,15 @@
       "Bash(cmd.exe /c \"tasklist | findstr -i electron\")",
       "Bash(powershell:*)",
       "Bash(wc:*)",
-      "Bash(Service \")"
+      "Bash(Service \")",
+      "Bash(git fetch:*)",
+      "Bash(pnpm package:win:*)",
+      "Bash(npx electron-rebuild)",
+      "Bash(npx @electron/rebuild)",
+      "Bash(USE_HARD_LINKS=false npm_config_package_manager_strict=false npx electron-builder:*)",
+      "Bash(npx electron-builder --win portable --config.npmRebuild=false)",
+      "Bash(npx electron-builder --win nsis --config.npmRebuild=false)",
+      "Bash(git config:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
