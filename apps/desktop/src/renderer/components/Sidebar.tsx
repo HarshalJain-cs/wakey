@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     LayoutDashboard,
     Timer,
@@ -22,7 +22,9 @@ import {
     Target,
     Music,
     Keyboard,
-    HelpCircle
+    HelpCircle,
+    ChevronRight,
+    ChevronLeft
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -56,6 +58,10 @@ const navItems = [
 export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }: SidebarProps) {
     const [stats, setStats] = useState({ focusTime: 0, sessions: 0 });
     const [currentActivity, setCurrentActivity] = useState<{ app: string; category: string } | null>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isPinned, setIsPinned] = useState(false);
+    const sidebarRef = useRef<HTMLElement>(null);
+    const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!window.wakey) return;
@@ -71,9 +77,8 @@ export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }
         };
 
         loadStats();
-        const interval = setInterval(loadStats, 30000); // Refresh every 30s
+        const interval = setInterval(loadStats, 30000);
 
-        // Listen for activity updates
         window.wakey.onActivityUpdate((activity) => {
             setCurrentActivity({ app: activity.app, category: activity.category });
         });
@@ -84,6 +89,26 @@ export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }
         };
     }, []);
 
+    const handleMouseEnter = () => {
+        if (hoverTimeoutRef.current) {
+            clearTimeout(hoverTimeoutRef.current);
+            hoverTimeoutRef.current = null;
+        }
+        setIsExpanded(true);
+    };
+
+    const handleMouseLeave = () => {
+        if (isPinned) return;
+        hoverTimeoutRef.current = setTimeout(() => {
+            setIsExpanded(false);
+        }, 300);
+    };
+
+    const togglePin = () => {
+        setIsPinned(!isPinned);
+        if (!isPinned) setIsExpanded(true);
+    };
+
     const formatTime = (minutes: number) => {
         const h = Math.floor(minutes / 60);
         const m = minutes % 60;
@@ -92,76 +117,110 @@ export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }
     };
 
     return (
-        <aside className="w-64 bg-dark-950 border-r border-dark-800 flex flex-col">
-            {/* Tracking status */}
-            <div className="p-4 border-b border-dark-800">
+        <>
+            {/* Invisible hover trigger zone */}
+            <div
+                className="fixed left-0 top-8 w-5 h-full z-40"
+                onMouseEnter={handleMouseEnter}
+            />
+
+            <aside
+                ref={sidebarRef}
+                className={`fixed left-0 top-8 h-[calc(100vh-32px)] bg-dark-950 border-r border-dark-800 
+                    flex flex-col z-50 transition-all duration-300 ease-in-out
+                    ${isExpanded || isPinned ? 'w-64 translate-x-0 shadow-2xl shadow-primary-500/10' : 'w-64 -translate-x-full'}`}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+            >
+                {/* Pin Toggle Button */}
                 <button
-                    onClick={() => {
-                        console.log('[Sidebar] Toggle tracking clicked');
-                        onTrackingToggle();
-                    }}
-                    className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${isTracking
-                        ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
-                        : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
-                        }`}
+                    onClick={togglePin}
+                    className={`absolute -right-3 top-20 w-6 h-6 rounded-full bg-dark-800 border border-dark-700 
+                        flex items-center justify-center text-dark-400 hover:text-white hover:bg-dark-700 
+                        transition-all z-50 ${isExpanded || isPinned ? 'opacity-100' : 'opacity-0'}`}
+                    title={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
                 >
-                    {isTracking ? (
-                        <>
-                            <Pause className="w-5 h-5" />
-                            <span>Tracking Active</span>
-                            <span className="ml-auto w-2 h-2 bg-primary-400 rounded-full animate-pulse" />
-                        </>
-                    ) : (
-                        <>
-                            <Play className="w-5 h-5" />
-                            <span>Start Tracking</span>
-                        </>
-                    )}
+                    {isPinned ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 </button>
 
-                {/* Current activity */}
-                {isTracking && currentActivity && (
-                    <div className="mt-3 p-2 bg-dark-800 rounded-lg">
-                        <div className="text-xs text-dark-400">Current</div>
-                        <div className="text-sm text-white truncate">{currentActivity.app}</div>
-                        <div className="text-xs text-primary-400">{currentActivity.category}</div>
-                    </div>
-                )}
-            </div>
-
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {navItems.map(({ path, icon: Icon, label }) => (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
-                                ? 'bg-primary-500/10 text-primary-400 border-l-2 border-primary-500'
-                                : 'text-dark-400 hover:text-white hover:bg-dark-800'
-                            }`
-                        }
+                {/* Tracking Status */}
+                <div className="p-4 border-b border-dark-800">
+                    <button
+                        onClick={() => {
+                            console.log('[Sidebar] Toggle tracking clicked');
+                            onTrackingToggle();
+                        }}
+                        className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${isTracking
+                            ? 'bg-primary-500/20 text-primary-400 hover:bg-primary-500/30'
+                            : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
+                            }`}
                     >
-                        <Icon className="w-5 h-5" />
-                        <span className="font-medium">{label}</span>
-                    </NavLink>
-                ))}
+                        {isTracking ? (
+                            <>
+                                <Pause className="w-5 h-5" />
+                                <span>Tracking Active</span>
+                                <span className="ml-auto w-2 h-2 bg-primary-400 rounded-full animate-pulse" />
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-5 h-5" />
+                                <span>Start Tracking</span>
+                            </>
+                        )}
+                    </button>
 
-                <button
-                    onClick={onSupportClick}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-dark-400 hover:text-white hover:bg-dark-800 w-full text-left"
-                >
-                    <HelpCircle className="w-5 h-5" />
-                    <span className="font-medium">Support</span>
-                </button>
-            </nav>
+                    {isTracking && currentActivity && (
+                        <div className="mt-3 p-2 bg-dark-800 rounded-lg">
+                            <div className="text-xs text-dark-400">Current</div>
+                            <div className="text-sm text-white truncate">{currentActivity.app}</div>
+                            <div className="text-xs text-primary-400">{currentActivity.category}</div>
+                        </div>
+                    )}
+                </div>
 
-            {/* Quick stats */}
-            <div className="p-4 border-t border-dark-800">
-                <div className="text-xs text-dark-500 mb-2">Today's Focus</div>
-                <div className="text-2xl font-bold text-white">{formatTime(stats.focusTime)}</div>
-                <div className="text-xs text-dark-400 mt-1">{stats.sessions} session{stats.sessions !== 1 ? 's' : ''} completed</div>
-            </div>
-        </aside>
+                {/* Navigation */}
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-dark-700 scrollbar-track-transparent">
+                    {navItems.map(({ path, icon: Icon, label }) => (
+                        <NavLink
+                            key={path}
+                            to={path}
+                            preventScrollReset={true}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
+                                    ? 'bg-primary-500/10 text-primary-400 border-l-2 border-primary-500'
+                                    : 'text-dark-400 hover:text-white hover:bg-dark-800'
+                                }`
+                            }
+                        >
+                            <Icon className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-medium">{label}</span>
+                        </NavLink>
+                    ))}
+
+                    <button
+                        onClick={onSupportClick}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-dark-400 hover:text-white hover:bg-dark-800 w-full text-left"
+                    >
+                        <HelpCircle className="w-5 h-5 flex-shrink-0" />
+                        <span className="font-medium">Support</span>
+                    </button>
+                </nav>
+
+                {/* Quick Stats */}
+                <div className="p-4 border-t border-dark-800">
+                    <div className="text-xs text-dark-500 mb-2">Today's Focus</div>
+                    <div className="text-2xl font-bold text-white">{formatTime(stats.focusTime)}</div>
+                    <div className="text-xs text-dark-400 mt-1">{stats.sessions} session{stats.sessions !== 1 ? 's' : ''} completed</div>
+                </div>
+            </aside>
+
+            {/* Glowing indicator when collapsed */}
+            {!isExpanded && !isPinned && (
+                <div
+                    className="fixed left-0 top-8 w-1 h-[calc(100vh-32px)] bg-gradient-to-b from-primary-500/50 via-primary-500/20 to-transparent z-40 cursor-pointer"
+                    onMouseEnter={handleMouseEnter}
+                />
+            )}
+        </>
     );
 }

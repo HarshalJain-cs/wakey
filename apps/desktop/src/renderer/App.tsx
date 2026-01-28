@@ -257,7 +257,7 @@ export default function App() {
             <TitleBar darkMode={darkMode} />
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} onSupportClick={() => setShowSupportModal(true)} />
-                <main className="flex-1 overflow-auto bg-dark-900 p-6">
+                <main className="flex-1 overflow-auto bg-dark-900 p-6 pl-8">
                     <Suspense fallback={
                         <div className="flex items-center justify-center h-full">
                             <div className="text-center">

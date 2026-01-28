@@ -662,3 +662,4 @@ export default function Home() {
 ---
 
 *Documentation generated for Wakey Website v1.0.0*
+

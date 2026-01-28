@@ -19,9 +19,12 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
+import { IncomingMessage } from 'http';
 import Store from 'electron-store';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { getEncryptionKey, getWebSocketToken, validateWebSocketToken } from './security';
+import { logger } from './logger';
 
 // ============================================
 // Type Definitions
@@ -427,8 +430,22 @@ function startBrowserTrackingServer(retryCount = 0): void {
             });
         });
 
-        browserWss.on('connection', (ws: WebSocket) => {
-            console.log('Browser extension connected via WebSocket');
+        browserWss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+            // Security: Validate WebSocket token before accepting connection
+            const url = new URL(req.url || '', `ws://localhost:${BROWSER_WS_PORT}`);
+            const token = url.searchParams.get('token');
+
+            // Log connection attempt (development only)
+            logger.debug('WebSocket connection attempt', { hasToken: !!token });
+
+            // Validate token
+            if (!validateWebSocketToken(token)) {
+                logger.warn('WebSocket connection rejected: invalid token');
+                ws.close(4001, 'Unauthorized: Invalid or missing token');
+                return;
+            }
+
+            logger.info('Browser extension connected via WebSocket');
             extensionClientsConnected++;
             connectedClients.add(ws);
 
@@ -448,7 +465,7 @@ function startBrowserTrackingServer(retryCount = 0): void {
                     message: 'Connected to Wakey Desktop App'
                 }));
             } catch (e) {
-                console.error('Failed to send acknowledgment:', e);
+                logger.error('Failed to send acknowledgment:', e);
             }
 
             // Handle pong responses (keeps connection alive)
@@ -461,12 +478,12 @@ function startBrowserTrackingServer(retryCount = 0): void {
                     const event: BrowserEvent = JSON.parse(data.toString());
                     handleBrowserEvent(event);
                 } catch (error) {
-                    console.error('Failed to parse browser event:', error);
+                    logger.error('Failed to parse browser event:', error);
                 }
             });
 
             ws.on('close', (code, reason) => {
-                console.log(`Browser extension disconnected (code: ${code}, reason: ${reason || 'unknown'})`);
+                logger.info(`Browser extension disconnected (code: ${code}, reason: ${reason || 'unknown'})`);
                 extensionClientsConnected = Math.max(0, extensionClientsConnected - 1);
                 connectedClients.delete(ws);
                 // Notify renderer that extension disconnected
@@ -479,7 +496,7 @@ function startBrowserTrackingServer(retryCount = 0): void {
             });
 
             ws.on('error', (error) => {
-                console.error('WebSocket client error:', error);
+                logger.error('WebSocket client error:', error);
                 connectedClients.delete(ws);
                 extensionClientsConnected = Math.max(0, extensionClientsConnected - 1);
             });
@@ -502,20 +519,20 @@ function startBrowserTrackingServer(retryCount = 0): void {
 
         browserWss.on('error', (error) => {
             const nodeError = error as NodeJS.ErrnoException;
-            console.error('WebSocket server error:', error);
+            logger.error('WebSocket server error:', error);
 
             // Handle port in use - retry with backoff
             if (nodeError.code === 'EADDRINUSE') {
-                console.log(`Port ${BROWSER_WS_PORT} in use, attempting to retry...`);
+                logger.warn(`Port ${BROWSER_WS_PORT} in use, attempting to retry...`);
                 browserWss = null;
 
                 if (retryCount < MAX_RETRIES) {
                     setTimeout(() => {
-                        console.log(`Retry attempt ${retryCount + 1}/${MAX_RETRIES}...`);
+                        logger.info(`Retry attempt ${retryCount + 1}/${MAX_RETRIES}...`);
                         startBrowserTrackingServer(retryCount + 1);
                     }, RETRY_DELAY * (retryCount + 1));
                 } else {
-                    console.error(`Failed to start WebSocket server after ${MAX_RETRIES} attempts`);
+                    logger.error(`Failed to start WebSocket server after ${MAX_RETRIES} attempts`);
                     mainWindow?.webContents.send('browser-activity', {
                         type: 'server_error',
                         error: 'Port in use',
@@ -526,7 +543,7 @@ function startBrowserTrackingServer(retryCount = 0): void {
         });
 
     } catch (error) {
-        console.error('Failed to start browser tracking server:', error);
+        logger.error('Failed to start browser tracking server:', error);
         if (retryCount < MAX_RETRIES) {
             setTimeout(() => {
                 startBrowserTrackingServer(retryCount + 1);
@@ -867,20 +884,24 @@ function createWindow(): void {
     });
 
     // Implement Content Security Policy
+    // Note: 'unsafe-inline' and 'unsafe-eval' are currently required by React/Vite
+    // TODO: Implement nonce-based CSP when migrating to stricter build config
     mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
         callback({
             responseHeaders: {
                 ...details.responseHeaders,
                 'Content-Security-Policy': [
                     "default-src 'self'; " +
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +  // Required for React/Vite
                     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                     "font-src 'self' https://fonts.gstatic.com; " +
                     "img-src 'self' data: https:; " +
-                    "connect-src 'self' https://api.groq.com https://api.openai.com https://*.supabase.co wss://*.supabase.co; " +
+                    "connect-src 'self' https://api.groq.com https://api.openai.com https://*.supabase.co wss://*.supabase.co ws://localhost:8765; " +
                     "object-src 'none'; " +
                     "base-uri 'self'; " +
-                    "form-action 'self';"
+                    "form-action 'self'; " +
+                    "frame-ancestors 'none'; " +  // Prevent clickjacking
+                    "upgrade-insecure-requests;"   // Force HTTPS
                 ]
             }
         });
@@ -965,7 +986,8 @@ function registerShortcuts(): void {
 }
 
 // Secure API key storage utilities
-const ENCRYPTION_KEY = scryptSync('wakey-secure-api-keys', 'salt', 32);
+// Security: Use machine-specific encryption key instead of hardcoded value
+const ENCRYPTION_KEY = getEncryptionKey();
 const ALGORITHM = 'aes-256-gcm';
 
 function encrypt(text: string): string {
@@ -1052,6 +1074,11 @@ function setupIpcHandlers(): void {
         connected: extensionClientsConnected > 0,
         clientCount: extensionClientsConnected,
     }));
+
+    // WebSocket token for browser extension authentication
+    ipcMain.handle('get-websocket-token', () => {
+        return getWebSocketToken();
+    });
 
     // Get activities for a date range (for analytics)
     ipcMain.handle('get-activities-range', (_e, startDate: string, endDate: string) => {

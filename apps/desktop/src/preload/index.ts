@@ -52,6 +52,9 @@ contextBridge.exposeInMainWorld('wakey', {
     // Extension status
     getExtensionStatus: () => ipcRenderer.invoke('get-extension-status'),
 
+    // WebSocket token for browser extension authentication
+    getWebSocketToken: () => ipcRenderer.invoke('get-websocket-token'),
+
     // Analytics - real data from store
     getActivitiesRange: (startDate: string, endDate: string) =>
         ipcRenderer.invoke('get-activities-range', startDate, endDate),
@@ -163,6 +166,7 @@ declare global {
             saveFocusPreset: (preset: any) => Promise<boolean>;
             deleteFocusPreset: (id: string) => Promise<boolean>;
             getExtensionStatus: () => Promise<{ connected: boolean; clientCount: number }>;
+            getWebSocketToken: () => Promise<string>;
             getActivitiesRange: (startDate: string, endDate: string) => Promise<any[]>;
             getStatsRange: (startDate: string, endDate: string) => Promise<{
                 date: string;
@@ -228,11 +232,11 @@ declare global {
             getAppVersion: () => Promise<string>;
             getUpdateConfig: () => Promise<{ autoDownload: boolean; autoInstallOnAppQuit: boolean; allowPrerelease: boolean; checkInterval: number }>;
             setUpdateConfig: (config: { autoDownload?: boolean; autoInstallOnAppQuit?: boolean; allowPrerelease?: boolean; checkInterval?: number }) => Promise<any>;
-             onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; error?: string }) => void) => void;
-             getSecureApiKeys: () => Promise<Record<string, string>>;
-             setSecureApiKey: (key: string, value: string) => Promise<boolean>;
-             deleteSecureApiKey: (key: string) => Promise<boolean>;
-             removeAllListeners: (channel: string) => void;
+            onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; error?: string }) => void) => void;
+            getSecureApiKeys: () => Promise<Record<string, string>>;
+            setSecureApiKey: (key: string, value: string) => Promise<boolean>;
+            deleteSecureApiKey: (key: string) => Promise<boolean>;
+            removeAllListeners: (channel: string) => void;
         };
     }
 }

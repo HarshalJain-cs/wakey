@@ -24,6 +24,22 @@ export interface SpotifyConfig {
     accessToken: string | null;
     refreshToken: string | null;
     expiresAt: number | null;
+    mobileNumber: string | null;
+    userProfile: {
+        displayName: string;
+        email: string;
+        image: string | null;
+        isPremium: boolean;
+    } | null;
+}
+
+export interface SpotifyPlaylist {
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+    trackCount: number;
+    uri: string;
 }
 
 // Spotify OAuth configuration
@@ -58,6 +74,8 @@ class SpotifyService {
             accessToken: null,
             refreshToken: null,
             expiresAt: null,
+            mobileNumber: null,
+            userProfile: null,
         };
     }
 
@@ -90,20 +108,131 @@ class SpotifyService {
     }
 
     /**
+     * Connect with mobile number - Opens Spotify OAuth
+     * The mobile number is stored for reference and recovery
+     */
+    async connectWithMobile(mobileNumber: string): Promise<{ success: boolean; message: string }> {
+        try {
+            this.config.mobileNumber = mobileNumber;
+            this.saveConfig();
+
+            // Open Spotify OAuth in browser
+            const authUrl = this.getAuthUrl();
+
+            // Use Electron's shell to open in default browser
+            if ((window as any).wakey?.openExternal) {
+                (window as any).wakey.openExternal(authUrl);
+            } else {
+                window.open(authUrl, '_blank');
+            }
+
+            return {
+                success: true,
+                message: 'Spotify authorization page opened. Please log in with your Spotify account linked to ' + mobileNumber,
+            };
+        } catch (error) {
+            console.error('Spotify connect error:', error);
+            return {
+                success: false,
+                message: 'Failed to open Spotify authorization.',
+            };
+        }
+    }
+
+    /**
+     * Get stored mobile number
+     */
+    getMobileNumber(): string | null {
+        return this.config.mobileNumber;
+    }
+
+    /**
+     * Get user profile
+     */
+    getUserProfile() {
+        return this.config.userProfile;
+    }
+
+    /**
      * Handle OAuth callback
      */
     async handleAuthCallback(code: string): Promise<boolean> {
         // In production, exchange code for tokens via backend
         console.log('Would exchange Spotify auth code:', code);
 
-        // Placeholder
+        // Placeholder - simulates successful auth
         this.config.accessToken = 'demo_access_token';
         this.config.refreshToken = 'demo_refresh_token';
         this.config.expiresAt = Date.now() + 3600 * 1000;
         this.config.enabled = true;
+        this.config.userProfile = {
+            displayName: 'Spotify User',
+            email: 'user@example.com',
+            image: null,
+            isPremium: true,
+        };
         this.saveConfig();
 
         return true;
+    }
+
+    /**
+     * Get focus-friendly playlists
+     */
+    async getFocusPlaylists(): Promise<SpotifyPlaylist[]> {
+        if (!this.isConnected()) {
+            // Return demo playlists
+            return [
+                { id: '1', name: 'Deep Focus', description: 'Keep calm and focus', image: '', trackCount: 100, uri: 'spotify:playlist:37i9dQZF1DWZeKCadgRdKQ' },
+                { id: '2', name: 'Lo-Fi Beats', description: 'Chill beats to relax', image: '', trackCount: 75, uri: 'spotify:playlist:37i9dQZF1DWWQRwui0ExPn' },
+                { id: '3', name: 'Peaceful Piano', description: 'Peaceful piano to help you slow down', image: '', trackCount: 150, uri: 'spotify:playlist:37i9dQZF1DX4sWSpwq3LiO' },
+            ];
+        }
+
+        try {
+            const response = await fetch(
+                'https://api.spotify.com/v1/search?q=focus%20chill%20lofi&type=playlist&limit=10',
+                { headers: { 'Authorization': `Bearer ${this.config.accessToken}` } }
+            );
+
+            if (!response.ok) return [];
+
+            const data = await response.json();
+            return data.playlists.items.map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                description: p.description || '',
+                image: p.images?.[0]?.url || '',
+                trackCount: p.tracks?.total || 0,
+                uri: p.uri,
+            }));
+        } catch (error) {
+            console.error('Get focus playlists error:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Play a specific playlist
+     */
+    async playPlaylist(playlistUri: string): Promise<boolean> {
+        if (!this.isConnected()) return false;
+
+        try {
+            const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${this.config.accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ context_uri: playlistUri }),
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error('Play playlist error:', error);
+            return false;
+        }
     }
 
     /**
@@ -282,6 +411,8 @@ class SpotifyService {
         this.config.refreshToken = null;
         this.config.expiresAt = null;
         this.config.enabled = false;
+        this.config.mobileNumber = null;
+        this.config.userProfile = null;
         this.currentTrack = null;
         this.saveConfig();
     }

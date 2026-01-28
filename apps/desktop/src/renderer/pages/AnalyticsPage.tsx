@@ -128,7 +128,7 @@ export default function AnalyticsPage() {
             setWeekComparison(comparison);
             setAllTimeStats(allTime);
 
-            // Build week data with filled days
+            // Build chart data with filled days
             if (rangeStats && Array.isArray(rangeStats)) {
                 const today = new Date();
                 const dayCount = period === 'day' ? 1 : period === 'week' ? 7 : period === 'month' ? 30 : 7;
@@ -140,8 +140,20 @@ export default function AnalyticsPage() {
                     const dateStr = date.toISOString().split('T')[0];
                     const realData = rangeStats.find((s: { date: string }) => s.date === dateStr);
 
+                    // Format date label based on period
+                    let dateLabel: string;
+                    if (period === 'day') {
+                        dateLabel = 'Today';
+                    } else if (period === 'week') {
+                        dateLabel = date.toLocaleDateString('en-US', { weekday: 'short' });
+                    } else if (period === 'month') {
+                        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    } else {
+                        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }
+
                     days.push({
-                        date: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                        date: dateLabel,
                         focusMinutes: realData?.focusMinutes || 0,
                         distractions: realData?.distractions || 0,
                         sessions: realData?.sessions || 0,
@@ -289,8 +301,8 @@ export default function AnalyticsPage() {
                     <div className="text-2xl font-bold text-white">
                         {formatTime(period === 'all' && allTimeStats ? allTimeStats.totalFocusMinutes : totalFocus)}
                     </div>
-                    <div className="text-xs text-dark-500 mt-1">
-                        {period === 'all' ? `${allTimeStats?.totalDays || 0} days tracked` : `This ${period}`}
+                    <div className="text-xs text-dark-500 mt-1 text-center">
+                        {period === 'all' ? `${allTimeStats?.totalDays || 0} days tracked` : period === 'day' ? 'Today' : `This ${period}`}
                     </div>
                 </div>
 
@@ -301,8 +313,8 @@ export default function AnalyticsPage() {
                         </div>
                         <span className="text-dark-400 text-sm">Avg Daily</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">{formatTime(avgDailyFocus)}</div>
-                    <div className="text-xs text-dark-500 mt-1">Per day</div>
+                    <div className="text-2xl font-bold text-white text-center">{formatTime(avgDailyFocus)}</div>
+                    <div className="text-xs text-dark-500 mt-1 text-center">Per day</div>
                 </div>
 
                 <div className="bg-dark-800 rounded-xl p-4 border border-dark-700">
@@ -312,10 +324,10 @@ export default function AnalyticsPage() {
                         </div>
                         <span className="text-dark-400 text-sm">Sessions</span>
                     </div>
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-2xl font-bold text-white text-center">
                         {period === 'all' && allTimeStats ? allTimeStats.completedSessions : weekData.reduce((sum, d) => sum + d.sessions, 0)}
                     </div>
-                    <div className="text-xs text-dark-500 mt-1">Completed</div>
+                    <div className="text-xs text-dark-500 mt-1 text-center">Completed</div>
                 </div>
 
                 <div className="bg-dark-800 rounded-xl p-4 border border-dark-700">
@@ -339,7 +351,7 @@ export default function AnalyticsPage() {
                             <ArrowDown className="w-4 h-4 text-red-400" />
                         )}
                     </div>
-                    <div className="text-xs text-dark-500 mt-1">Focus time change</div>
+                    <div className="text-xs text-dark-500 mt-1 text-center">Focus time change</div>
                 </div>
             </div>
 
