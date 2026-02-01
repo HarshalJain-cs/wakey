@@ -55,7 +55,8 @@
       "Bash(npx electron-builder --win nsis --config.npmRebuild=false)",
       "Bash(git config:*)",
       "Bash(tasklist /FI \"IMAGENAME eq electron.exe\")",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(curl:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
