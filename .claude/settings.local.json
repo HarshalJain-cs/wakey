@@ -56,7 +56,9 @@
       "Bash(git config:*)",
       "Bash(tasklist /FI \"IMAGENAME eq electron.exe\")",
       "Bash(tasklist)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git -C /c/Users/Admin/Desktop/dev/wakey log --oneline)",
+      "Bash(git -C /c/Users/Admin/Desktop/dev/wakey.front log --oneline)"
     ]
   },
   "enableAllProjectMcpServers": true,
