@@ -24,13 +24,13 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             title: 'Video Tutorials',
             description: 'Get started with basic features and settings.',
             icon: Video,
-            action: () => window.open('https://www.youtube.com/@wakey_app', '_blank'),
+            action: () => window.open('https://wakey.app/support#tutorials', '_blank'),
         },
         {
             title: 'User Guide',
             description: 'Learn how to get the most out of Wakey.',
             icon: BookOpen,
-            action: () => window.open('https://docs.wakey.app', '_blank'),
+            action: () => window.open('https://wakey.app/support#guide', '_blank'),
         },
         {
             title: 'Join Our Discord Community',
@@ -51,7 +51,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             title: 'Chat Support',
             description: 'Connect with us directly for immediate support.',
             icon: MessageCircle,
-            action: () => window.open('https://wakey.app/chat', '_blank'),
+            action: () => window.open('https://wakey.app/support#chat', '_blank'),
         },
         {
             title: 'Email Support',
@@ -63,13 +63,13 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
             title: 'Bug Report',
             description: 'Report an issue or bug you encountered.',
             icon: AlertTriangle,
-            action: () => window.open('https://github.com/wakey/wakey/issues', '_blank'),
+            action: () => window.open('https://wakey.app/support#bug-report', '_blank'),
         },
         {
             title: 'Feature Request',
             description: 'Suggest a new feature or improvement.',
             icon: Lightbulb,
-            action: () => window.open('https://wakey.app/feature-requests', '_blank'),
+            action: () => window.open('https://wakey.app/support#feature-request', '_blank'),
         }
     ];
 

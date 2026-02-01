@@ -272,17 +272,17 @@ export default function WorkBreakReminder({
             {!showReminder && !isOnBreak && (
                 <div className="fixed bottom-4 left-4 z-40">
                     <div
-                        className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-800/80 border border-slate-700 shadow-lg"
+                        className="group flex items-center gap-2 px-4 py-2.5 rounded-full bg-dark-900/90 backdrop-blur-md border border-dark-600/50 shadow-2xl shadow-primary-500/10 hover:shadow-primary-500/20 transition-all duration-300 hover:scale-105 hover:border-primary-500/30 cursor-pointer"
                         title={`Next break in ${formatMinutes(workDurationMinutes * 60 - workTimeElapsed)} min`}
                     >
-                        <Coffee className="w-4 h-4 text-slate-400" />
-                        <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                        <Coffee className="w-4 h-4 text-primary-400 group-hover:text-primary-300 transition-colors" />
+                        <div className="w-20 h-2 bg-dark-700 rounded-full overflow-hidden">
                             <div
-                                className="h-full bg-green-500 transition-all duration-1000"
+                                className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-1000 rounded-full"
                                 style={{ width: `${(workTimeElapsed / (workDurationMinutes * 60)) * 100}%` }}
                             />
                         </div>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-sm font-medium text-white group-hover:text-primary-300 transition-colors">
                             {formatMinutes(workDurationMinutes * 60 - workTimeElapsed)}m
                         </span>
                     </div>

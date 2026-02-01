@@ -4,7 +4,7 @@ import {
     Key, Save, Trash2, FolderOpen, Database,
     Keyboard, Info, Shield, Zap, AlertTriangle, Plus, X,
     Cloud, LogOut, User, Check, Coffee, Palette, Target,
-    Calendar, Lock, BarChart3, Volume2, Mic, Bot
+    Calendar, Lock, BarChart3, Volume2, Mic, Bot, TrendingUp
 } from 'lucide-react';
 import * as supabaseAuth from '../services/supabase-auth';
 
@@ -29,6 +29,12 @@ interface Settings {
     workHoursStart?: string;
     workHoursEnd?: string;
     weeklyReports?: boolean;
+    userFullName?: string;
+    userOccupation?: string;
+    userTimezone?: string;
+    voiceEnabled?: boolean;
+    wakeWord?: string;
+    traderEnabled?: boolean;
 }
 
 // Settings navigation sections
@@ -43,6 +49,7 @@ const SETTINGS_SECTIONS = [
     { id: 'ai', label: 'AI Configuration', icon: Key },
     { id: 'jarvis', label: 'JARVIS Integration', icon: Bot },
     { id: 'voice', label: 'Voice Commands', icon: Mic },
+    { id: 'trader', label: 'Trader Mode', icon: BarChart3 },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'privacy', label: 'Privacy', icon: Lock },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
@@ -75,6 +82,14 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
     const [showSupabaseKey, setShowSupabaseKey] = useState(false);
     const [authUser, setAuthUser] = useState<{ email: string } | null>(null);
     const [requireAuth, setRequireAuth] = useState(true);
+    const [voiceEnabled, setVoiceEnabled] = useState(true);
+    const [wakeWord, setWakeWord] = useState('hey wakey');
+    const [traderEnabled, setTraderEnabled] = useState(false);
+    const [userProfile, setUserProfile] = useState<{
+        fullName: string;
+        occupation: string;
+        timezone: string;
+    }>({ fullName: '', occupation: '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone });
 
     useEffect(() => {
         loadSettings();
@@ -260,6 +275,51 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                                 </div>
                             </div>
                         )}
+
+                        {/* Profile Details */}
+                        <div className="p-4 bg-dark-800 rounded-xl border border-dark-700 space-y-4">
+                            <h3 className="font-medium text-white flex items-center gap-2">
+                                <User className="w-4 h-4 text-primary-400" />
+                                Profile Details
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-dark-400 mb-1">Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={userProfile.fullName}
+                                        onChange={(e) => {
+                                            setUserProfile(prev => ({ ...prev, fullName: e.target.value }));
+                                            updateSetting('userFullName', e.target.value);
+                                        }}
+                                        placeholder="Enter your name"
+                                        className="input-field w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-dark-400 mb-1">Occupation</label>
+                                    <input
+                                        type="text"
+                                        value={userProfile.occupation}
+                                        onChange={(e) => {
+                                            setUserProfile(prev => ({ ...prev, occupation: e.target.value }));
+                                            updateSetting('userOccupation', e.target.value);
+                                        }}
+                                        placeholder="e.g. Developer, Designer"
+                                        className="input-field w-full"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-dark-400 mb-1">Timezone</label>
+                                <input
+                                    type="text"
+                                    value={userProfile.timezone}
+                                    readOnly
+                                    className="input-field w-full bg-dark-700 cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
 
                         <SettingToggle
                             icon={Shield}
@@ -624,8 +684,11 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                             icon={Mic}
                             label="Enable Voice Commands"
                             description="Use voice to control Wakey"
-                            value={true}
-                            onChange={() => { }}
+                            value={voiceEnabled}
+                            onChange={(v) => {
+                                setVoiceEnabled(v);
+                                updateSetting('voiceEnabled', v);
+                            }}
                         />
 
                         <div className="p-4 bg-dark-800 rounded-xl border border-dark-700">
@@ -640,7 +703,11 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                             </div>
                             <input
                                 type="text"
-                                defaultValue="hey wakey"
+                                value={wakeWord}
+                                onChange={(e) => {
+                                    setWakeWord(e.target.value);
+                                    updateSetting('wakeWord', e.target.value);
+                                }}
                                 className="input-field w-full"
                             />
                         </div>
@@ -807,11 +874,89 @@ export default function SettingsPage({ darkMode, onDarkModeToggle }: SettingsPag
                             Calendar Integration
                         </h2>
 
-                        <div className="p-4 bg-dark-800 rounded-xl border border-dark-700">
-                            <p className="text-dark-400 text-sm">
-                                Calendar integration coming soon. Connect with Google Calendar and Outlook to automatically track meeting time.
-                            </p>
+                        <div className="p-4 bg-dark-800 rounded-xl border border-dark-700 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                                        <Calendar className="w-5 h-5 text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-white">Google Calendar</div>
+                                        <div className="text-sm text-dark-400">Sync meetings and events</div>
+                                    </div>
+                                </div>
+                                <button className="px-4 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-colors">
+                                    Connect
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                                        <Calendar className="w-5 h-5 text-blue-500" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium text-white">Outlook Calendar</div>
+                                        <div className="text-sm text-dark-400">Microsoft 365 integration</div>
+                                    </div>
+                                </div>
+                                <button className="px-4 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg transition-colors">
+                                    Connect
+                                </button>
+                            </div>
                         </div>
+
+                        <p className="text-sm text-dark-500">
+                            Connected calendars will automatically track meeting time and block focus sessions during events.
+                        </p>
+                    </div>
+                )}
+
+                {/* Trader Mode Section */}
+                {activeSection === 'trader' && (
+                    <div className="space-y-4">
+                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-green-400" />
+                            Trader Mode
+                        </h2>
+
+                        <SettingToggle
+                            icon={BarChart3}
+                            label="Enable Trader Dashboard"
+                            description="Show trading features and market tracking"
+                            value={traderEnabled}
+                            onChange={(v) => {
+                                setTraderEnabled(v);
+                                updateSetting('traderEnabled', v);
+                            }}
+                        />
+
+                        {traderEnabled && (
+                            <>
+                                <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/30">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <TrendingUp className="w-6 h-6 text-green-400" />
+                                        <span className="font-medium text-white">Trading Integrations</span>
+                                    </div>
+                                    <p className="text-dark-400 text-sm mb-4">
+                                        Connect your trading platforms to track performance and correlate with focus sessions.
+                                    </p>
+                                    <div className="space-y-2">
+                                        <button className="w-full px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors flex items-center justify-between">
+                                            <span>Groww</span>
+                                            <span className="text-dark-400 text-sm">Coming Soon</span>
+                                        </button>
+                                        <button className="w-full px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors flex items-center justify-between">
+                                            <span>TradingView</span>
+                                            <span className="text-dark-400 text-sm">Coming Soon</span>
+                                        </button>
+                                        <button className="w-full px-4 py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg transition-colors flex items-center justify-between">
+                                            <span>Binance</span>
+                                            <span className="text-dark-400 text-sm">Coming Soon</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

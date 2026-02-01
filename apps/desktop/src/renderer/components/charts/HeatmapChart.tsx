@@ -10,17 +10,19 @@ interface HeatmapChartProps {
     data: HeatmapData[];
     title?: string;
     height?: number;
-    colorScale?: 'teal' | 'purple' | 'green' | 'blue';
+    colorScale?: 'teal' | 'purple' | 'green' | 'blue' | 'orange' | 'cyan';
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const COLOR_SCALES = {
-    teal: ['#042f2e', '#134e4a', '#115e59', '#0d9488', '#14b8a6', '#2dd4bf'],
-    purple: ['#2e1065', '#4c1d95', '#5b21b6', '#7c3aed', '#8b5cf6', '#a78bfa'],
-    green: ['#052e16', '#14532d', '#166534', '#16a34a', '#22c55e', '#4ade80'],
-    blue: ['#082f49', '#0c4a6e', '#0369a1', '#0284c7', '#0ea5e9', '#38bdf8'],
+    teal: ['#0d3331', '#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4'],
+    purple: ['#3b0764', '#6b21a8', '#9333ea', '#a855f7', '#c084fc', '#d8b4fe'],
+    green: ['#14532d', '#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'],
+    blue: ['#172554', '#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'],
+    orange: ['#431407', '#c2410c', '#ea580c', '#f97316', '#fb923c', '#fdba74'],
+    cyan: ['#083344', '#0e7490', '#06b6d4', '#22d3ee', '#67e8f9', '#a5f3fc'],
 };
 
 export default function HeatmapChart({
@@ -39,11 +41,39 @@ export default function HeatmapChart({
     // Create a lookup map for quick access
     const dataMap = new Map<string, number>();
     let maxValue = 0;
+    let totalActivity = 0;
     data.forEach(d => {
         const key = `${d.day}-${d.hour}`;
         dataMap.set(key, d.value);
         if (d.value > maxValue) maxValue = d.value;
+        totalActivity += d.value;
     });
+
+    // Check for new users with no activity
+    if (totalActivity === 0) {
+        return (
+            <div className="w-full" style={{ minHeight: height }}>
+                {title && (
+                    <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+                )}
+                <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-cyan-500/5 to-primary-500/5 rounded-lg border border-dark-700" style={{ height: height - 40 }}>
+                    <div className="p-3 bg-cyan-500/20 rounded-full mb-3">
+                        <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <p className="text-white font-medium text-center mb-1">Building Your Heatmap</p>
+                    <p className="text-xs text-dark-400 text-center max-w-48">
+                        Your activity patterns will appear here as you use your computer
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs text-cyan-400">
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                        <span>Tracking active</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const colors = COLOR_SCALES[colorScale];
 
@@ -67,7 +97,7 @@ export default function HeatmapChart({
         return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
     };
 
-    const cellSize = 20;
+    const cellSize = 16;
     const gap = 2;
 
     return (
@@ -78,13 +108,13 @@ export default function HeatmapChart({
 
             <div className="overflow-x-auto">
                 <div className="inline-block">
-                    {/* Hour labels */}
+                    {/* Hour labels - show all 24 hours */}
                     <div className="flex ml-10 mb-1">
-                        {HOURS.filter((_, i) => i % 3 === 0).map(hour => (
+                        {HOURS.map(hour => (
                             <div
                                 key={hour}
-                                className="text-xs text-dark-500"
-                                style={{ width: (cellSize + gap) * 3, textAlign: 'left' }}
+                                className="text-[10px] text-dark-500 text-center"
+                                style={{ width: cellSize + gap }}
                             >
                                 {formatHour(hour)}
                             </div>
@@ -92,11 +122,11 @@ export default function HeatmapChart({
                     </div>
 
                     {/* Heatmap grid */}
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col" style={{ gap: gap }}>
                         {DAYS.map((day, dayIndex) => (
                             <div key={day} className="flex items-center">
                                 <div className="w-10 text-xs text-dark-500">{day}</div>
-                                <div className="flex gap-0.5">
+                                <div className="flex" style={{ gap: gap }}>
                                     {HOURS.map((hour, hourIndex) => {
                                         const key = `${day}-${hour}`;
                                         const value = dataMap.get(key) || 0;

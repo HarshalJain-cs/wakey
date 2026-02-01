@@ -7,12 +7,15 @@
  * - Task management API
  * - Insights retrieval
  * 
- * This module exposes Wakey functionality to JARVIS via IPC.
+ * SECURITY: This module uses proper IPC handlers instead of executeJavaScript()
+ * to prevent code injection vulnerabilities.
  * 
  * @module main/jarvis-api
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+import { logger } from './logger';
+import { isValidVoiceCommand, parseVoiceCommand, sanitizeCommand } from './voice-validator';
 
 // ============================================
 // Types
@@ -54,40 +57,50 @@ interface Task {
 
 /**
  * Initialize JARVIS API handlers
+ * 
+ * SECURITY: All data retrieval now uses IPC message passing instead of
+ * executeJavaScript() to prevent code injection attacks.
  */
 export function setupJarvisAPI(mainWindow: BrowserWindow): void {
-    console.log('[JARVIS API] Setting up IPC handlers...');
+    logger.info('[JARVIS API] Setting up IPC handlers...');
 
     // ==========================================
-    // Activity Endpoints
+    // Activity Endpoints (Using secure IPC)
     // ==========================================
 
     /**
      * Get today's activity stats
+     * SECURITY: Uses IPC request/response pattern instead of executeJavaScript
      */
     ipcMain.handle('jarvis:get-stats', async (): Promise<JarvisAPIResponse<ActivityStats>> => {
         try {
-            // Get stats from renderer
-            const stats = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_activity');
-                    if (!stored) return null;
-                    return JSON.parse(stored);
-                })()
-            `);
+            // Request stats from renderer via IPC
+            const statsPromise = new Promise<ActivityStats>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, stats: ActivityStats) => {
+                    ipcMain.removeListener('jarvis:stats-response', handler);
+                    resolve(stats);
+                };
+                ipcMain.on('jarvis:stats-response', handler);
+                mainWindow.webContents.send('jarvis:request-stats');
 
-            return {
-                success: true,
-                data: stats || {
-                    focusMinutes: 0,
-                    breakMinutes: 0,
-                    distractionMinutes: 0,
-                    tasksCompleted: 0,
-                    focusScore: 0,
-                    deepWorkSessions: 0,
-                },
-            };
+                // Timeout fallback
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:stats-response', handler);
+                    resolve({
+                        focusMinutes: 0,
+                        breakMinutes: 0,
+                        distractionMinutes: 0,
+                        tasksCompleted: 0,
+                        focusScore: 0,
+                        deepWorkSessions: 0,
+                    });
+                }, 1000);
+            });
+
+            const stats = await statsPromise;
+            return { success: true, data: stats };
         } catch (error) {
+            logger.error('[JARVIS API] Failed to get stats:', error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to get stats',
@@ -100,13 +113,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-current-activity', async (): Promise<JarvisAPIResponse> => {
         try {
-            const activity = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_current_activity');
-                    return stored ? JSON.parse(stored) : null;
-                })()
-            `);
+            const activityPromise = new Promise<unknown>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, activity: unknown) => {
+                    ipcMain.removeListener('jarvis:activity-response', handler);
+                    resolve(activity);
+                };
+                ipcMain.on('jarvis:activity-response', handler);
+                mainWindow.webContents.send('jarvis:request-activity');
 
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:activity-response', handler);
+                    resolve(null);
+                }, 1000);
+            });
+
+            const activity = await activityPromise;
             return { success: true, data: activity };
         } catch (error) {
             return {
@@ -188,13 +209,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-focus-session', async (): Promise<JarvisAPIResponse<FocusSession | null>> => {
         try {
-            const session = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_focus_session');
-                    return stored ? JSON.parse(stored) : null;
-                })()
-            `);
+            const sessionPromise = new Promise<FocusSession | null>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, session: FocusSession | null) => {
+                    ipcMain.removeListener('jarvis:focus-session-response', handler);
+                    resolve(session);
+                };
+                ipcMain.on('jarvis:focus-session-response', handler);
+                mainWindow.webContents.send('jarvis:request-focus-session');
 
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:focus-session-response', handler);
+                    resolve(null);
+                }, 1000);
+            });
+
+            const session = await sessionPromise;
             return { success: true, data: session };
         } catch (error) {
             return {
@@ -213,13 +242,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-tasks', async (): Promise<JarvisAPIResponse<Task[]>> => {
         try {
-            const tasks = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_tasks');
-                    return stored ? JSON.parse(stored) : [];
-                })()
-            `);
+            const tasksPromise = new Promise<Task[]>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, tasks: Task[]) => {
+                    ipcMain.removeListener('jarvis:tasks-response', handler);
+                    resolve(tasks);
+                };
+                ipcMain.on('jarvis:tasks-response', handler);
+                mainWindow.webContents.send('jarvis:request-tasks');
 
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:tasks-response', handler);
+                    resolve([]);
+                }, 1000);
+            });
+
+            const tasks = await tasksPromise;
             return { success: true, data: tasks };
         } catch (error) {
             return {
@@ -234,17 +271,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:create-task', async (_event, title: string, priority: string = 'medium'): Promise<JarvisAPIResponse<Task>> => {
         try {
+            // Sanitize input
+            const sanitizedTitle = title.slice(0, 200).replace(/[<>]/g, '');
+            const sanitizedPriority = ['low', 'medium', 'high'].includes(priority) ? priority : 'medium';
+
             mainWindow.webContents.send('jarvis:command', {
                 type: 'create-task',
-                title,
-                priority,
+                title: sanitizedTitle,
+                priority: sanitizedPriority,
             });
 
             const task: Task = {
                 id: `task_${Date.now()}`,
-                title,
+                title: sanitizedTitle,
                 status: 'todo',
-                priority: priority as Task['priority'],
+                priority: sanitizedPriority as Task['priority'],
                 createdAt: new Date(),
             };
 
@@ -262,9 +303,12 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:complete-task', async (_event, taskId: string): Promise<JarvisAPIResponse> => {
         try {
+            // Sanitize taskId
+            const sanitizedId = taskId.slice(0, 100).replace(/[^a-zA-Z0-9_-]/g, '');
+
             mainWindow.webContents.send('jarvis:command', {
                 type: 'complete-task',
-                taskId,
+                taskId: sanitizedId,
             });
 
             return { success: true };
@@ -285,13 +329,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-insights', async (): Promise<JarvisAPIResponse<string[]>> => {
         try {
-            const insights = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_insights');
-                    return stored ? JSON.parse(stored) : [];
-                })()
-            `);
+            const insightsPromise = new Promise<string[]>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, insights: string[]) => {
+                    ipcMain.removeListener('jarvis:insights-response', handler);
+                    resolve(insights);
+                };
+                ipcMain.on('jarvis:insights-response', handler);
+                mainWindow.webContents.send('jarvis:request-insights');
 
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:insights-response', handler);
+                    resolve([]);
+                }, 1000);
+            });
+
+            const insights = await insightsPromise;
             return { success: true, data: insights };
         } catch (error) {
             return {
@@ -306,15 +358,21 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-predictions', async (): Promise<JarvisAPIResponse> => {
         try {
-            const predictions = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    if (typeof window.predictiveTaskService !== 'undefined') {
-                        return window.predictiveTaskService.getPredictions();
-                    }
-                    return [];
-                })()
-            `);
+            const predictionsPromise = new Promise<unknown>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, predictions: unknown) => {
+                    ipcMain.removeListener('jarvis:predictions-response', handler);
+                    resolve(predictions);
+                };
+                ipcMain.on('jarvis:predictions-response', handler);
+                mainWindow.webContents.send('jarvis:request-predictions');
 
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:predictions-response', handler);
+                    resolve([]);
+                }, 1000);
+            });
+
+            const predictions = await predictionsPromise;
             return { success: true, data: predictions };
         } catch (error) {
             return {
@@ -351,14 +409,22 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
      */
     ipcMain.handle('jarvis:get-tracking-status', async (): Promise<JarvisAPIResponse<{ isTracking: boolean }>> => {
         try {
-            const isTracking = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    const stored = localStorage.getItem('wakey_tracking_active');
-                    return stored === 'true';
-                })()
-            `);
+            const statusPromise = new Promise<{ isTracking: boolean }>((resolve) => {
+                const handler = (_event: Electron.IpcMainEvent, status: { isTracking: boolean }) => {
+                    ipcMain.removeListener('jarvis:tracking-status-response', handler);
+                    resolve(status);
+                };
+                ipcMain.on('jarvis:tracking-status-response', handler);
+                mainWindow.webContents.send('jarvis:request-tracking-status');
 
-            return { success: true, data: { isTracking } };
+                setTimeout(() => {
+                    ipcMain.removeListener('jarvis:tracking-status-response', handler);
+                    resolve({ isTracking: false });
+                }, 1000);
+            });
+
+            const status = await statusPromise;
+            return { success: true, data: status };
         } catch (error) {
             return {
                 success: false,
@@ -368,25 +434,115 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
     });
 
     // ==========================================
-    // Voice Command Handler
+    // Voice Command Handler (SECURED)
     // ==========================================
 
     /**
      * Execute voice command
+     * 
+     * SECURITY: Commands are validated against an allowlist before execution.
+     * This prevents command injection attacks.
      */
     ipcMain.handle('jarvis:voice-command', async (_event, command: string): Promise<JarvisAPIResponse<string>> => {
         try {
-            const result = await mainWindow.webContents.executeJavaScript(`
-                (function() {
-                    if (typeof window.jarvisBridgeService !== 'undefined') {
-                        return window.jarvisBridgeService.processVoiceCommand('${command.replace(/'/g, "\\'")}');
-                    }
-                    return 'Voice commands not available';
-                })()
-            `);
+            // Step 1: Sanitize the command
+            const sanitized = sanitizeCommand(command);
 
-            return { success: true, data: result };
+            if (!sanitized) {
+                logger.warn('[JARVIS API] Empty voice command received');
+                return { success: false, error: 'Empty command' };
+            }
+
+            // Step 2: Validate against allowlist
+            if (!isValidVoiceCommand(sanitized)) {
+                logger.warn('[JARVIS API] Invalid voice command rejected:', sanitized);
+                return {
+                    success: false,
+                    error: 'Command not recognized. Try: start focus, stop focus, create task [title], get stats'
+                };
+            }
+
+            // Step 3: Parse and execute the command
+            const parsed = parseVoiceCommand(sanitized);
+
+            if (!parsed) {
+                return { success: false, error: 'Could not parse command' };
+            }
+
+            logger.debug('[JARVIS API] Executing voice command:', parsed);
+
+            // Execute based on command type
+            let responseMessage = '';
+
+            switch (parsed.type) {
+                case 'focus':
+                    if (parsed.action === 'start') {
+                        mainWindow.webContents.send('jarvis:command', {
+                            type: 'start-focus',
+                            duration: parsed.params.duration || 25,
+                        });
+                        responseMessage = `Starting ${parsed.params.duration || 25} minute focus session`;
+                    } else {
+                        mainWindow.webContents.send('jarvis:command', { type: 'stop-focus' });
+                        responseMessage = 'Focus session stopped';
+                    }
+                    break;
+
+                case 'break':
+                    mainWindow.webContents.send('jarvis:command', {
+                        type: 'start-break',
+                        duration: parsed.params.duration || 5,
+                    });
+                    responseMessage = `Starting ${parsed.params.duration || 5} minute break`;
+                    break;
+
+                case 'task':
+                    if (parsed.action === 'create') {
+                        mainWindow.webContents.send('jarvis:command', {
+                            type: 'create-task',
+                            title: parsed.params.title,
+                            priority: 'medium',
+                        });
+                        responseMessage = `Created task: ${parsed.params.title}`;
+                    } else if (parsed.action === 'complete') {
+                        mainWindow.webContents.send('jarvis:command', {
+                            type: 'complete-task',
+                            title: parsed.params.title,
+                        });
+                        responseMessage = `Marked task as complete: ${parsed.params.title}`;
+                    }
+                    break;
+
+                case 'query':
+                    mainWindow.webContents.send('jarvis:command', {
+                        type: 'query',
+                        query: parsed.action,
+                    });
+                    responseMessage = `Getting ${parsed.action}...`;
+                    break;
+
+                case 'tracking':
+                    mainWindow.webContents.send('jarvis:command', {
+                        type: `${parsed.action}-tracking`,
+                    });
+                    responseMessage = `Tracking ${parsed.action}ed`;
+                    break;
+
+                case 'navigation':
+                    mainWindow.webContents.send('jarvis:command', {
+                        type: 'navigate',
+                        page: parsed.params.page,
+                    });
+                    responseMessage = `Opening ${parsed.params.page}`;
+                    break;
+
+                default:
+                    responseMessage = 'Command processed';
+            }
+
+            return { success: true, data: responseMessage };
         } catch (error) {
+            logger.error('[JARVIS API] Voice command error:', error);
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to execute command',
@@ -420,7 +576,7 @@ export function setupJarvisAPI(mainWindow: BrowserWindow): void {
         };
     });
 
-    console.log('[JARVIS API] All handlers registered');
+    logger.info('[JARVIS API] All handlers registered');
 }
 
 /**
@@ -450,7 +606,7 @@ export function teardownJarvisAPI(): void {
         ipcMain.removeHandler(handler);
     });
 
-    console.log('[JARVIS API] All handlers removed');
+    logger.info('[JARVIS API] All handlers removed');
 }
 
 export default { setupJarvisAPI, teardownJarvisAPI };

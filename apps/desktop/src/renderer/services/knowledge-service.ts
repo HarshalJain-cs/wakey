@@ -503,6 +503,60 @@ if (typeof window !== 'undefined') {
     loadFromDisk();
 }
 
+// Initialize demo flashcards if none exist
+function initializeDemoFlashcards() {
+    if (flashcards.length === 0) {
+        // Productivity category
+        createFlashcard(
+            'What is the Pomodoro Technique?',
+            'A time management method that uses 25-minute focused work intervals separated by 5-minute breaks. After 4 pomodoros, take a longer 15-30 minute break.'
+        );
+        createFlashcard(
+            'What does the 2-Minute Rule suggest?',
+            'If a task takes less than 2 minutes to complete, do it immediately rather than adding it to your to-do list.'
+        );
+        createFlashcard(
+            'What is Deep Work?',
+            'Professional activities performed in a state of distraction-free concentration that push your cognitive capabilities to their limit. Term coined by Cal Newport.'
+        );
+
+        // Programming category  
+        createFlashcard(
+            'What is the difference between == and === in JavaScript?',
+            '== compares values with type coercion (loose equality), while === compares both value and type without coercion (strict equality).'
+        );
+        createFlashcard(
+            'What is Big O notation?',
+            'A mathematical notation describing the upper bound of an algorithm\'s time or space complexity, used to analyze worst-case performance.'
+        );
+        createFlashcard(
+            'What is a closure in JavaScript?',
+            'A function that has access to variables from its outer (enclosing) scope even after the outer function has returned.'
+        );
+
+        // General Knowledge
+        createFlashcard(
+            'What is the spacing effect in learning?',
+            'The phenomenon where learning is more effective when spread out over time rather than concentrated in a single session (also known as distributed practice).'
+        );
+        createFlashcard(
+            'What is active recall?',
+            'A learning technique where you actively stimulate memory by testing yourself, rather than passively reviewing information.'
+        );
+        createFlashcard(
+            'What is the Pareto Principle (80/20 Rule)?',
+            'The observation that roughly 80% of effects come from 20% of causes. Applied to productivity: 80% of results come from 20% of efforts.'
+        );
+    }
+}
+
+// Called after loading to add demo data if empty
+setTimeout(() => {
+    if (typeof window !== 'undefined' && window.wakey) {
+        initializeDemoFlashcards();
+    }
+}, 1000);
+
 export function exportKnowledgeData(): {
     notes: Note[];
     nodes: KnowledgeNode[];

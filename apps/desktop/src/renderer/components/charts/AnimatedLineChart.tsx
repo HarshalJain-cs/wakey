@@ -75,46 +75,57 @@ export default function AnimatedLineChart({
 
     // Use AreaChart if showArea is true for filled gradient effect
     if (showArea && (!dataKeys || dataKeys.length === 1)) {
+        // Calculate chart height - leave room for title
+        const titleHeight = title ? 36 : 0;
+        const chartHeight = height - titleHeight;
+
         return (
-            <div className="w-full" style={{ height }}>
+            <div className="w-full flex flex-col" style={{ height }}>
                 {title && (
-                    <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
+                    <h3 className="text-lg font-semibold text-white mb-2 flex-shrink-0">{title}</h3>
                 )}
-                <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                        data={data}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                        <defs>
-                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={lineColor} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />}
-                        <XAxis
-                            dataKey="name"
-                            stroke="#64748b"
-                            fontSize={12}
-                        />
-                        <YAxis
-                            tickFormatter={valueFormatter}
-                            stroke="#64748b"
-                            fontSize={12}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area
-                            type="monotone"
-                            dataKey="value"
-                            stroke={lineColor}
-                            strokeWidth={2}
-                            fill="url(#colorValue)"
-                            animationBegin={0}
-                            animationDuration={800}
-                            animationEasing="ease-out"
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
+                <div className="flex-1 min-h-0" style={{ height: chartHeight }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                            data={data}
+                            margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        >
+                            <defs>
+                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={lineColor} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={lineColor} stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />}
+                            <XAxis
+                                dataKey="name"
+                                stroke="#64748b"
+                                fontSize={11}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                tickFormatter={valueFormatter}
+                                stroke="#64748b"
+                                fontSize={11}
+                                tickLine={false}
+                                axisLine={false}
+                                width={50}
+                            />
+                            <Tooltip content={<CustomTooltip />} />
+                            <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke={lineColor}
+                                strokeWidth={2}
+                                fill="url(#colorValue)"
+                                animationBegin={0}
+                                animationDuration={800}
+                                animationEasing="ease-out"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
         );
     }

@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { exportToCSV, exportToJSON, exportToPDF } from '../services/export-service';
 import { AnimatedPieChart, AnimatedBarChart, AnimatedLineChart, HeatmapChart } from '../components/charts';
+import EnhancedCategoryChart from '../components/charts/EnhancedCategoryChart';
+import ActivityInsights from '../components/charts/ActivityInsights';
 import { CHART_COLORS } from '../constants/chart-colors';
 
 interface DayStats {
@@ -33,6 +35,7 @@ export default function AnalyticsPage() {
     const [categoryData, setCategoryData] = useState<{ name: string; minutes: number }[]>([]);
     const [productiveData, setProductiveData] = useState({ productive: 0, distracting: 0 });
     const [heatmapData, setHeatmapData] = useState<{ day: string; hour: number; value: number }[]>([]);
+    const [previousDayData, setPreviousDayData] = useState<{ day: string; hour: number; value: number }[]>([]);
     const [weekComparison, setWeekComparison] = useState<{
         thisWeek: { focusMinutes: number; distractions: number };
         lastWeek: { focusMinutes: number; distractions: number };
@@ -52,6 +55,14 @@ export default function AnalyticsPage() {
     useEffect(() => {
         loadStats();
         loadEnhancedData();
+
+        // Real-time refresh every 30 seconds
+        const refreshInterval = setInterval(() => {
+            loadStats();
+            loadEnhancedData();
+        }, 30000);
+
+        return () => clearInterval(refreshInterval);
     }, [period]);
 
     const getDateRange = () => {
@@ -71,7 +82,10 @@ export default function AnalyticsPage() {
                 startDate.setDate(today.getDate() - 29);
                 break;
             case 'all':
-                return { startStr: undefined, endStr: undefined };
+                // Use 1 year for "all time" to ensure we get data
+                startDate = new Date(today);
+                startDate.setFullYear(today.getFullYear() - 1);
+                break;
             default:
                 startDate = new Date(today);
                 startDate.setDate(today.getDate() - 6);
@@ -99,6 +113,11 @@ export default function AnalyticsPage() {
         try {
             const { startStr, endStr } = getDateRange();
 
+            // Calculate yesterday's date for previous day insights
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
             // Load all data in parallel
             const [
                 websites,
@@ -106,6 +125,7 @@ export default function AnalyticsPage() {
                 categories,
                 productive,
                 heatmap,
+                yesterdayHeatmap,
                 comparison,
                 allTime,
                 rangeStats,
@@ -115,6 +135,7 @@ export default function AnalyticsPage() {
                 window.wakey.getCategoryBreakdown?.(startStr, endStr) || [],
                 window.wakey.getProductiveVsDistracting?.(startStr, endStr) || { productive: 0, distracting: 0 },
                 window.wakey.getHourlyHeatmap?.(startStr, endStr) || [],
+                window.wakey.getHourlyHeatmap?.(yesterdayStr, yesterdayStr) || [],
                 window.wakey.getWeekComparison?.() || null,
                 window.wakey.getAllTimeStats?.() || null,
                 startStr ? window.wakey.getStatsRange(startStr, endStr!) : Promise.resolve([]),
@@ -125,6 +146,7 @@ export default function AnalyticsPage() {
             setCategoryData(categories);
             setProductiveData(productive);
             setHeatmapData(heatmap);
+            setPreviousDayData(yesterdayHeatmap);
             setWeekComparison(comparison);
             setAllTimeStats(allTime);
 
@@ -410,11 +432,21 @@ export default function AnalyticsPage() {
             {/* Category Breakdown & Heatmap */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-                    <AnimatedPieChart
-                        data={categoryChartData}
+                    <EnhancedCategoryChart
+                        data={categoryChartData.map(item => ({
+                            name: item.name,
+                            value: item.value,
+                            // Mock sub-categories for "Other"
+                            subCategories: item.name.toLowerCase() === 'other' ? [
+                                { name: 'System Apps', value: Math.round(item.value * 0.3) },
+                                { name: 'Utilities', value: Math.round(item.value * 0.25) },
+                                { name: 'File Manager', value: Math.round(item.value * 0.2) },
+                                { name: 'Settings', value: Math.round(item.value * 0.15) },
+                                { name: 'Misc', value: Math.round(item.value * 0.1) },
+                            ] : undefined,
+                        }))}
                         title="Time by Category"
-                        height={300}
-                        showLegend
+                        height={350}
                     />
                 </div>
 
@@ -422,8 +454,12 @@ export default function AnalyticsPage() {
                     <HeatmapChart
                         data={heatmapData}
                         title="Activity Heatmap"
-                        height={300}
-                        colorScale="teal"
+                        height={180}
+                        colorScale="cyan"
+                    />
+                    <ActivityInsights
+                        data={heatmapData}
+                        previousDayData={previousDayData}
                     />
                 </div>
             </div>

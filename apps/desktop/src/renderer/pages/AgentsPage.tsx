@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-    Bot, Play, Pause, RefreshCw, Settings, Clock,
+    Bot, Play, RefreshCw, Settings, Clock,
     Search, Code, TrendingUp, Lightbulb, Plus, X,
-    CheckCircle, XCircle, AlertCircle
+    CheckCircle, XCircle, AlertCircle, ExternalLink, Wand2, StopCircle
 } from 'lucide-react';
 import {
     agentManager,
@@ -37,17 +37,6 @@ export default function AgentsPage() {
         setResearchTopics(agentManager.getResearchAgent().getTopics());
         setRecentTrends(agentManager.getTrendAgent().getRecentTrends());
         setPredictions(agentManager.getPredictionAgent().getPredictions());
-    };
-
-    const handleToggleAgent = (type: AgentType) => {
-        const agent = agents.find(a => a.type === type);
-        if (agent?.status === 'running') {
-            agentManager.pauseAgent(type);
-        } else {
-            agentManager.configureAgent(type, { enabled: true });
-            agentManager.startAgent(type);
-        }
-        refreshData();
     };
 
     const handleRunAgent = async (type: AgentType) => {
@@ -122,12 +111,28 @@ export default function AgentsPage() {
                         AI agents that work in the background to help you stay productive
                     </p>
                 </div>
-                <button
-                    onClick={refreshData}
-                    className="p-2 rounded-lg bg-dark-800 hover:bg-dark-700 text-gray-400 hover:text-white transition-colors"
-                >
-                    <RefreshCw className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => window.open('https://huggingface.co/agents', '_blank')}
+                        className="flex items-center gap-2 px-4 py-2 bg-dark-800 hover:bg-dark-700 text-gray-300 hover:text-white rounded-lg transition-colors"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        Agent Library
+                    </button>
+                    <button
+                        onClick={() => setSelectedAgent('research')}
+                        className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-lg transition-colors"
+                    >
+                        <Wand2 className="w-4 h-4" />
+                        Create Agent
+                    </button>
+                    <button
+                        onClick={refreshData}
+                        className="p-2 rounded-lg bg-dark-800 hover:bg-dark-700 text-gray-400 hover:text-white transition-colors"
+                    >
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
             {/* Agent Cards */}
@@ -138,20 +143,20 @@ export default function AgentsPage() {
                         <div
                             key={agent.type}
                             className={`bg-dark-800 rounded-xl p-6 border transition-colors cursor-pointer ${selectedAgent === agent.type
-                                    ? 'border-teal-500'
-                                    : 'border-dark-700 hover:border-dark-600'
+                                ? 'border-teal-500'
+                                : 'border-dark-700 hover:border-dark-600'
                                 }`}
                             onClick={() => setSelectedAgent(selectedAgent === agent.type ? null : agent.type)}
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className={`p-3 rounded-lg ${agent.status === 'running'
-                                            ? 'bg-teal-500/20'
-                                            : 'bg-dark-700'
+                                        ? 'bg-teal-500/20'
+                                        : 'bg-dark-700'
                                         }`}>
                                         <Icon className={`w-6 h-6 ${agent.status === 'running'
-                                                ? 'text-teal-400'
-                                                : 'text-gray-400'
+                                            ? 'text-teal-400'
+                                            : 'text-gray-400'
                                             }`} />
                                     </div>
                                     <div>
@@ -162,37 +167,45 @@ export default function AgentsPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    {/* Primary action: Run/Stop */}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleRunAgent(agent.type);
+                                            if (agent.status === 'running') {
+                                                agentManager.pauseAgent(agent.type);
+                                                refreshData();
+                                            } else {
+                                                handleRunAgent(agent.type);
+                                            }
                                         }}
                                         disabled={runningAgent === agent.type}
-                                        className="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-                                        title="Run now"
+                                        className={`px-3 py-2 rounded-lg flex items-center gap-2 transition-all duration-200 ${agent.status === 'running'
+                                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                            : 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
+                                            } disabled:opacity-50`}
+                                        title={agent.status === 'running' ? 'Stop agent' : 'Run agent'}
                                     >
                                         {runningAgent === agent.type ? (
                                             <RefreshCw className="w-4 h-4 animate-spin" />
+                                        ) : agent.status === 'running' ? (
+                                            <StopCircle className="w-4 h-4" />
                                         ) : (
                                             <Play className="w-4 h-4" />
                                         )}
+                                        <span className="text-xs font-medium">
+                                            {runningAgent === agent.type ? 'Running' : agent.status === 'running' ? 'Stop' : 'Run'}
+                                        </span>
                                     </button>
+                                    {/* Settings gear */}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleToggleAgent(agent.type);
+                                            setSelectedAgent(selectedAgent === agent.type ? null : agent.type);
                                         }}
-                                        className={`p-2 rounded-lg transition-colors ${agent.status === 'running'
-                                                ? 'bg-teal-500/20 text-teal-400 hover:bg-teal-500/30'
-                                                : 'bg-dark-700 text-gray-400 hover:bg-dark-600 hover:text-white'
-                                            }`}
-                                        title={agent.status === 'running' ? 'Pause' : 'Start'}
+                                        className="p-2 rounded-lg bg-dark-700 hover:bg-dark-600 text-gray-400 hover:text-white transition-colors"
+                                        title="Configure agent"
                                     >
-                                        {agent.status === 'running' ? (
-                                            <Pause className="w-4 h-4" />
-                                        ) : (
-                                            <Play className="w-4 h-4" />
-                                        )}
+                                        <Settings className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
@@ -298,8 +311,8 @@ export default function AgentsPage() {
                                         <div className="flex items-center justify-between">
                                             <span className="text-white">{trend.title}</span>
                                             <span className={`text-xs px-2 py-1 rounded ${trend.relevance > 0.7 ? 'bg-green-500/20 text-green-400' :
-                                                    trend.relevance > 0.4 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                        'bg-gray-500/20 text-gray-400'
+                                                trend.relevance > 0.4 ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    'bg-gray-500/20 text-gray-400'
                                                 }`}>
                                                 {Math.round(trend.relevance * 100)}%
                                             </span>
@@ -327,8 +340,8 @@ export default function AgentsPage() {
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-white font-medium">{pred.title}</span>
                                             <span className={`text-xs px-2 py-1 rounded ${pred.confidence > 0.8 ? 'bg-green-500/20 text-green-400' :
-                                                    pred.confidence > 0.6 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                        'bg-gray-500/20 text-gray-400'
+                                                pred.confidence > 0.6 ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    'bg-gray-500/20 text-gray-400'
                                                 }`}>
                                                 {Math.round(pred.confidence * 100)}% confidence
                                             </span>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Plug, Calendar, Mail, Zap, CheckSquare, Key,
     Check, X, RefreshCw, ExternalLink, Copy, Eye, EyeOff,
-    Trash2, Plus, Send, AlertCircle
+    Trash2, Plus, Send, AlertCircle, Bot, Music, Github, MessageSquare, ListTodo
 } from 'lucide-react';
 import {
     googleCalendarService,
@@ -18,6 +18,11 @@ import {
     EmailConfig,
     ApiConfig,
 } from '../services/integrations';
+import { jarvisService, JarvisConfig } from '../services/jarvis-integration-service';
+import { discordService, DiscordConfig } from '../services/discord-integration-service';
+import { githubService, GitHubConfig } from '../services/github-integration-service';
+import { todoistService, TodoistConfig } from '../services/todoist-integration-service';
+import { spotifyService, SpotifyConfig } from '../services/spotify-integration-service';
 
 export default function IntegrationsPage() {
     const [google, setGoogle] = useState<GoogleCalendarConfig>(googleCalendarService.getConfig());
@@ -27,12 +32,24 @@ export default function IntegrationsPage() {
     const [email, setEmail] = useState<EmailConfig>(emailService.getConfig());
     const [api, setApi] = useState<ApiConfig>(apiService.getConfig());
 
+    // New integration states
+    const [jarvis, setJarvis] = useState<JarvisConfig>(jarvisService.getConfig());
+    const [discord, setDiscord] = useState<DiscordConfig>(discordService.getConfig());
+    const [github, setGithub] = useState<GitHubConfig>(githubService.getConfig());
+    const [todoist, setTodoist] = useState<TodoistConfig>(todoistService.getConfig());
+    const [spotify, setSpotify] = useState<SpotifyConfig>(spotifyService.getConfig());
+
     const [loading, setLoading] = useState<string | null>(null);
     const [clickupApiKey, setClickupApiKey] = useState('');
     const [emailInput, setEmailInput] = useState('');
     const [newKeyName, setNewKeyName] = useState('');
     const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
     const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+    // New integration input states
+    const [discordWebhook, setDiscordWebhook] = useState('');
+    const [githubToken, setGithubToken] = useState('');
+    const [todoistToken, setTodoistToken] = useState('');
 
     useEffect(() => {
         refreshAll();
@@ -45,6 +62,11 @@ export default function IntegrationsPage() {
         setClickup(clickupService.getConfig());
         setEmail(emailService.getConfig());
         setApi(apiService.getConfig());
+        setJarvis(jarvisService.getConfig());
+        setDiscord(discordService.getConfig());
+        setGithub(githubService.getConfig());
+        setTodoist(todoistService.getConfig());
+        setSpotify(spotifyService.getConfig());
     };
 
     // Google Calendar handlers
@@ -798,20 +820,21 @@ export default function IntegrationsPage() {
                 </IntegrationCard>
             </div>
 
-            {/* JARVIS Integration */}
+            {/* JARVIS Integration - TOP PRIORITY */}
             <div className="space-y-3">
                 <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-cyan-400" />
-                    JARVIS AI Integration
+                    <Bot className="w-5 h-5 text-cyan-400" />
+                    🤖 JARVIS AI Integration
+                    <span className="ml-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs rounded-full">Priority</span>
                 </h2>
 
                 <IntegrationCard
                     id="jarvis"
-                    icon={Zap}
+                    icon={Bot}
                     title="JARVIS Bridge"
                     description="Connect to JARVIS master AI system"
-                    connected={false}
-                    statusText="Disconnected"
+                    connected={jarvis.enabled}
+                    statusText={jarvis.enabled ? 'Connected' : 'Disconnected'}
                     iconColor="bg-gradient-to-br from-cyan-500 to-blue-600"
                 >
                     <div className="space-y-4 pt-4">
@@ -824,27 +847,490 @@ export default function IntegrationsPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
                                 <span className="text-sm text-white">Share Activity Data</span>
-                                <button className="w-10 h-5 rounded-full bg-dark-600">
-                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                <button
+                                    onClick={() => {
+                                        jarvisService.updateConfig({ shareActivityData: !jarvis.shareActivityData });
+                                        setJarvis(jarvisService.getConfig());
+                                    }}
+                                    className={`w-10 h-5 rounded-full transition-all ${jarvis.shareActivityData ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                >
+                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${jarvis.shareActivityData ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
                             <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
                                 <span className="text-sm text-white">Enable Voice Commands</span>
-                                <button className="w-10 h-5 rounded-full bg-dark-600">
-                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                <button
+                                    onClick={() => {
+                                        jarvisService.updateConfig({ voiceCommandsEnabled: !jarvis.voiceCommandsEnabled });
+                                        setJarvis(jarvisService.getConfig());
+                                    }}
+                                    className={`w-10 h-5 rounded-full transition-all ${jarvis.voiceCommandsEnabled ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                >
+                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${jarvis.voiceCommandsEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
                             <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
                                 <span className="text-sm text-white">Receive JARVIS Commands</span>
-                                <button className="w-10 h-5 rounded-full bg-dark-600">
-                                    <div className="w-4 h-4 bg-white rounded-full shadow translate-x-0.5" />
+                                <button
+                                    onClick={() => {
+                                        jarvisService.updateConfig({ receiveCommands: !jarvis.receiveCommands });
+                                        setJarvis(jarvisService.getConfig());
+                                    }}
+                                    className={`w-10 h-5 rounded-full transition-all ${jarvis.receiveCommands ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                >
+                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${jarvis.receiveCommands ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                 </button>
                             </div>
                         </div>
-                        <button className="w-full btn-primary flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600">
-                            <Zap className="w-4 h-4" />
-                            Connect to JARVIS
-                        </button>
+                        {jarvis.enabled ? (
+                            <button
+                                onClick={async () => {
+                                    jarvisService.disconnect();
+                                    setJarvis(jarvisService.getConfig());
+                                }}
+                                className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                            >
+                                Disconnect from JARVIS
+                            </button>
+                        ) : (
+                            <button
+                                onClick={async () => {
+                                    setLoading('jarvis');
+                                    await jarvisService.connect('', '');
+                                    setJarvis(jarvisService.getConfig());
+                                    setLoading(null);
+                                }}
+                                disabled={loading === 'jarvis'}
+                                className="w-full btn-primary flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600"
+                            >
+                                {loading === 'jarvis' ? (
+                                    <>
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                        Connecting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Bot className="w-4 h-4" />
+                                        Connect to JARVIS
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                </IntegrationCard>
+            </div>
+
+            {/* Social & Communication */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-primary-400" />
+                    Social & Communication
+                </h2>
+
+                {/* Discord */}
+                <IntegrationCard
+                    id="discord"
+                    icon={MessageSquare}
+                    title="Discord Webhooks"
+                    description="Send notifications and daily summaries to Discord"
+                    connected={discord.enabled}
+                    statusText={discord.enabled ? 'Connected' : 'Not Connected'}
+                    iconColor="bg-gradient-to-br from-indigo-500 to-purple-600"
+                >
+                    <div className="space-y-4 pt-4">
+                        {discord.enabled ? (
+                            <>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Daily Summary</span>
+                                        <button
+                                            onClick={() => {
+                                                discordService.updateConfig({ notifyDailySummary: !discord.notifyDailySummary });
+                                                setDiscord(discordService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${discord.notifyDailySummary ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${discord.notifyDailySummary ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Achievements</span>
+                                        <button
+                                            onClick={() => {
+                                                discordService.updateConfig({ notifyAchievements: !discord.notifyAchievements });
+                                                setDiscord(discordService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${discord.notifyAchievements ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${discord.notifyAchievements ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            discordService.disconnect();
+                                            setDiscord(discordService.getConfig());
+                                        }}
+                                        className="flex-1 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                    >
+                                        Disconnect
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setLoading('discord-test');
+                                            await discordService.testWebhook();
+                                            setLoading(null);
+                                        }}
+                                        disabled={loading === 'discord-test'}
+                                        className="flex-1 btn-secondary flex items-center justify-center gap-2"
+                                    >
+                                        {loading === 'discord-test' ? (
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Send className="w-4 h-4" />
+                                        )}
+                                        Test
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm text-dark-400 block mb-2">Webhook URL</label>
+                                    <input
+                                        type="text"
+                                        value={discordWebhook}
+                                        onChange={(e) => setDiscordWebhook(e.target.value)}
+                                        placeholder="https://discord.com/api/webhooks/..."
+                                        className="input-field w-full"
+                                    />
+                                    <p className="text-xs text-dark-500 mt-1">
+                                        Create a webhook in Discord server settings → Integrations
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!discordWebhook.trim()) return;
+                                        setLoading('discord');
+                                        const result = await discordService.connect(discordWebhook);
+                                        if (result.success) {
+                                            setDiscordWebhook('');
+                                        }
+                                        setDiscord(discordService.getConfig());
+                                        setLoading(null);
+                                    }}
+                                    disabled={loading === 'discord' || !discordWebhook.trim()}
+                                    className="w-full btn-primary flex items-center justify-center gap-2"
+                                >
+                                    {loading === 'discord' ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            Connecting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <MessageSquare className="w-4 h-4" />
+                                            Connect Discord
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </IntegrationCard>
+            </div>
+
+            {/* Development & Productivity */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Github className="w-5 h-5 text-primary-400" />
+                    Development & Tasks
+                </h2>
+
+                {/* GitHub */}
+                <IntegrationCard
+                    id="github"
+                    icon={Github}
+                    title="GitHub"
+                    description="Track commits and correlate with focus sessions"
+                    connected={github.enabled}
+                    statusText={github.enabled ? `@${github.username}` : 'Not Connected'}
+                    iconColor="bg-gradient-to-br from-gray-700 to-gray-900"
+                >
+                    <div className="space-y-4 pt-4">
+                        {github.enabled ? (
+                            <>
+                                <div className="flex items-center gap-3 p-3 bg-dark-700 rounded-lg">
+                                    {github.avatarUrl && (
+                                        <img src={github.avatarUrl} alt="GitHub" className="w-8 h-8 rounded-full" />
+                                    )}
+                                    <div>
+                                        <p className="text-white font-medium">{github.username}</p>
+                                        <p className="text-xs text-dark-400">Connected</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Track Commits</span>
+                                        <button
+                                            onClick={() => {
+                                                githubService.updateConfig({ trackCommits: !github.trackCommits });
+                                                setGithub(githubService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${github.trackCommits ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${github.trackCommits ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Correlate with Focus</span>
+                                        <button
+                                            onClick={() => {
+                                                githubService.updateConfig({ correlateWithFocus: !github.correlateWithFocus });
+                                                setGithub(githubService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${github.correlateWithFocus ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${github.correlateWithFocus ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        githubService.disconnect();
+                                        setGithub(githubService.getConfig());
+                                    }}
+                                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                >
+                                    Disconnect
+                                </button>
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm text-dark-400 block mb-2">Personal Access Token</label>
+                                    <input
+                                        type="password"
+                                        value={githubToken}
+                                        onChange={(e) => setGithubToken(e.target.value)}
+                                        placeholder="ghp_..."
+                                        className="input-field w-full"
+                                    />
+                                    <p className="text-xs text-dark-500 mt-1">
+                                        Generate at github.com/settings/tokens
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!githubToken.trim()) return;
+                                        setLoading('github');
+                                        const result = await githubService.connect(githubToken);
+                                        if (result.success) {
+                                            setGithubToken('');
+                                        }
+                                        setGithub(githubService.getConfig());
+                                        setLoading(null);
+                                    }}
+                                    disabled={loading === 'github' || !githubToken.trim()}
+                                    className="w-full btn-primary flex items-center justify-center gap-2"
+                                >
+                                    {loading === 'github' ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            Connecting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Github className="w-4 h-4" />
+                                            Connect GitHub
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </IntegrationCard>
+
+                {/* Todoist */}
+                <IntegrationCard
+                    id="todoist"
+                    icon={ListTodo}
+                    title="Todoist"
+                    description="Sync tasks and auto-complete during focus"
+                    connected={todoist.enabled}
+                    statusText={todoist.enabled ? 'Connected' : 'Not Connected'}
+                    iconColor="bg-gradient-to-br from-red-500 to-orange-500"
+                >
+                    <div className="space-y-4 pt-4">
+                        {todoist.enabled ? (
+                            <>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Sync Tasks</span>
+                                        <button
+                                            onClick={() => {
+                                                todoistService.updateConfig({ syncTasks: !todoist.syncTasks });
+                                                setTodoist(todoistService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${todoist.syncTasks ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${todoist.syncTasks ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Auto-Complete in Focus</span>
+                                        <button
+                                            onClick={() => {
+                                                todoistService.updateConfig({ autoComplete: !todoist.autoComplete });
+                                                setTodoist(todoistService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${todoist.autoComplete ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${todoist.autoComplete ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        todoistService.disconnect();
+                                        setTodoist(todoistService.getConfig());
+                                    }}
+                                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                >
+                                    Disconnect
+                                </button>
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-sm text-dark-400 block mb-2">API Token</label>
+                                    <input
+                                        type="password"
+                                        value={todoistToken}
+                                        onChange={(e) => setTodoistToken(e.target.value)}
+                                        placeholder="Your Todoist API token"
+                                        className="input-field w-full"
+                                    />
+                                    <p className="text-xs text-dark-500 mt-1">
+                                        Find at todoist.com/prefs/integrations
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        if (!todoistToken.trim()) return;
+                                        setLoading('todoist');
+                                        const result = await todoistService.connect(todoistToken);
+                                        if (result.success) {
+                                            setTodoistToken('');
+                                        }
+                                        setTodoist(todoistService.getConfig());
+                                        setLoading(null);
+                                    }}
+                                    disabled={loading === 'todoist' || !todoistToken.trim()}
+                                    className="w-full btn-primary flex items-center justify-center gap-2"
+                                >
+                                    {loading === 'todoist' ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 animate-spin" />
+                                            Connecting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ListTodo className="w-4 h-4" />
+                                            Connect Todoist
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </IntegrationCard>
+            </div>
+
+            {/* Music & Focus */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Music className="w-5 h-5 text-primary-400" />
+                    Music & Focus
+                </h2>
+
+                {/* Spotify */}
+                <IntegrationCard
+                    id="spotify"
+                    icon={Music}
+                    title="Spotify"
+                    description="Control music during focus sessions"
+                    connected={spotify.enabled}
+                    statusText={spotify.enabled ? spotify.displayName || 'Connected' : 'Not Connected'}
+                    iconColor="bg-gradient-to-br from-green-500 to-green-600"
+                >
+                    <div className="space-y-4 pt-4">
+                        {spotify.enabled ? (
+                            <>
+                                <div className="flex items-center gap-3 p-3 bg-dark-700 rounded-lg">
+                                    <Music className="w-8 h-8 text-green-400" />
+                                    <div>
+                                        <p className="text-white font-medium">{spotify.displayName}</p>
+                                        <p className="text-xs text-dark-400">Spotify Connected</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Auto-Play on Focus</span>
+                                        <button
+                                            onClick={() => {
+                                                spotifyService.updateConfig({ autoPlayOnFocus: !spotify.autoPlayOnFocus });
+                                                setSpotify(spotifyService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${spotify.autoPlayOnFocus ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${spotify.autoPlayOnFocus ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">
+                                        <span className="text-sm text-white">Pause on Break</span>
+                                        <button
+                                            onClick={() => {
+                                                spotifyService.updateConfig({ autoPauseOnBreak: !spotify.autoPauseOnBreak });
+                                                setSpotify(spotifyService.getConfig());
+                                            }}
+                                            className={`w-10 h-5 rounded-full transition-all ${spotify.autoPauseOnBreak ? 'bg-primary-500' : 'bg-dark-600'}`}
+                                        >
+                                            <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${spotify.autoPauseOnBreak ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        spotifyService.disconnect();
+                                        setSpotify(spotifyService.getConfig());
+                                    }}
+                                    className="w-full px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                                >
+                                    Disconnect
+                                </button>
+                            </>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-sm text-dark-400">
+                                    Connect Spotify to automatically play focus music and control playback during sessions.
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        // Open Spotify OAuth flow
+                                        window.open(spotifyService.getAuthUrl(), '_blank');
+                                    }}
+                                    className="w-full btn-primary flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600"
+                                >
+                                    <Music className="w-4 h-4" />
+                                    Connect Spotify
+                                </button>
+                                <p className="text-xs text-dark-500 text-center">
+                                    Requires Spotify Premium for playback control
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </IntegrationCard>
             </div>
@@ -955,7 +1441,9 @@ export default function IntegrationsPage() {
 
                         {/* Documentation Link */}
                         <a
-                            href="#"
+                            href="https://wakey.app/developers/api"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="flex items-center justify-center gap-2 text-primary-400 hover:text-primary-300 text-sm"
                         >
                             <ExternalLink className="w-4 h-4" />

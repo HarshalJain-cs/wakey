@@ -22,6 +22,7 @@ export default function AIConsensusPage() {
     const [showSettings, setShowSettings] = useState(false);
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
     const [expandedResponse, setExpandedResponse] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setProviders(getProviders());
@@ -41,8 +42,27 @@ export default function AIConsensusPage() {
         e.preventDefault();
         if (!prompt.trim() || loading) return;
 
+        // Check if any providers are enabled
+        const enabledProviders = providers.filter(p => p.enabled);
+        if (enabledProviders.length === 0) {
+            setError('No AI providers enabled. Please enable at least one provider in settings.');
+            setShowSettings(true);
+            return;
+        }
+
+        // Check if API keys are configured for enabled providers (except Ollama)
+        const providersNeedingKeys = enabledProviders.filter(p =>
+            p.name !== 'ollama' && !apiKeys[p.name]
+        );
+        if (providersNeedingKeys.length > 0 && !enabledProviders.some(p => p.name === 'ollama')) {
+            setError(`API keys required for: ${providersNeedingKeys.map(p => p.name).join(', ')}. Configure in settings or enable Ollama for local inference.`);
+            setShowSettings(true);
+            return;
+        }
+
         setLoading(true);
         setResult(null);
+        setError(null);
 
         try {
             const consensusResult = await generateConsensus(
@@ -50,14 +70,21 @@ export default function AIConsensusPage() {
                 'You are a helpful AI assistant. Provide accurate and concise responses.',
                 500
             );
+
+            // Check if all responses failed
+            if (consensusResult.responses.every(r => r.error)) {
+                setError('All AI providers failed to respond. Please check your API keys and try again.');
+            }
+
             setResult(consensusResult);
 
             // Record performance
             consensusResult.responses.forEach(r => {
                 recordModelPerformance(r.provider, !r.error, r.latencyMs);
             });
-        } catch (error) {
-            console.error('Consensus error:', error);
+        } catch (err) {
+            console.error('Consensus error:', err);
+            setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -187,6 +214,23 @@ export default function AIConsensusPage() {
                 </div>
             </form>
 
+            {/* Error Alert */}
+            {error && (
+                <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-4 flex items-start gap-3">
+                    <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-red-400 font-medium">Error</p>
+                        <p className="text-red-300/80 text-sm mt-1">{error}</p>
+                    </div>
+                    <button
+                        onClick={() => setError(null)}
+                        className="ml-auto p-1 hover:bg-red-500/20 rounded transition-colors"
+                    >
+                        <XCircle className="w-4 h-4 text-red-400" />
+                    </button>
+                </div>
+            )}
+
             {/* Results */}
             {result && (
                 <div className="space-y-4">
@@ -307,7 +351,8 @@ export default function AIConsensusPage() {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

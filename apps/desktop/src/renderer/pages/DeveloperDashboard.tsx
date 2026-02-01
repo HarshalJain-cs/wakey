@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Code, GitBranch, GitCommit, GitPullRequest,
     Clock, Zap, FolderGit, FileCode,
-    Terminal, Coffee, Flame, BarChart3
+    Terminal, Coffee, Flame, BarChart3, Github, ExternalLink
 } from 'lucide-react';
 
 interface CodingSession {
@@ -224,21 +224,77 @@ export default function DeveloperDashboard() {
                 <div className="flex items-end gap-2 h-32">
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
                         const height = [60, 85, 45, 90, 75, 20, 40][i];
+                        const minutes = Math.round(height * 2.5);
                         const isToday = i === new Date().getDay() - 1 || (new Date().getDay() === 0 && i === 6);
                         return (
-                            <div key={day} className="flex-1 flex flex-col items-center gap-2">
-                                <div className="w-full flex flex-col justify-end h-24">
+                            <div key={day} className="flex-1 flex flex-col items-center gap-2 group">
+                                <div className="w-full flex flex-col justify-end h-24 relative">
+                                    {/* Tooltip */}
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-dark-700 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                        {Math.round(minutes)} min
+                                    </div>
                                     <div
-                                        className={`w-full rounded-t-lg transition-all ${isToday ? 'bg-primary-500' : 'bg-primary-500/40'}`}
+                                        className={`w-full rounded-t-lg transition-all duration-300 cursor-pointer
+                                            ${isToday ? 'bg-primary-500' : 'bg-primary-500/40'}
+                                            hover:scale-x-110 hover:brightness-125 hover:shadow-lg hover:shadow-primary-500/30`}
                                         style={{ height: `${height}%` }}
                                     />
                                 </div>
-                                <span className={`text-xs ${isToday ? 'text-primary-400' : 'text-dark-400'}`}>{day}</span>
+                                <span className={`text-xs transition-colors ${isToday ? 'text-primary-400' : 'text-dark-400 group-hover:text-white'}`}>{day}</span>
                             </div>
                         );
                     })}
                 </div>
             </div>
+
+            {/* GitHub Integration */}
+            <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Github className="w-5 h-5 text-primary-400" />
+                        GitHub Integration
+                    </h2>
+                    <button
+                        onClick={() => window.open('https://github.com', '_blank')}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-dark-700 hover:bg-dark-600 text-gray-300 rounded-lg transition-colors text-sm"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        Open GitHub
+                    </button>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-dark-900 rounded-lg p-4 border border-dark-600">
+                        <div className="text-2xl font-bold text-white mb-1">12</div>
+                        <div className="text-sm text-dark-400">Active PRs</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-4 border border-dark-600">
+                        <div className="text-2xl font-bold text-white mb-1">47</div>
+                        <div className="text-sm text-dark-400">Weekly Commits</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-4 border border-dark-600">
+                        <div className="text-2xl font-bold text-white mb-1">3</div>
+                        <div className="text-sm text-dark-400">Issues Closed</div>
+                    </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                    <div className="text-sm text-dark-400">Recent Commits</div>
+                    <div className="flex items-center gap-3 p-3 bg-dark-900 rounded-lg">
+                        <GitCommit className="w-4 h-4 text-green-400" />
+                        <div className="flex-1">
+                            <div className="text-white text-sm">feat: Add AI consensus error handling</div>
+                            <div className="text-xs text-dark-500">2 hours ago • main</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-dark-900 rounded-lg">
+                        <GitCommit className="w-4 h-4 text-green-400" />
+                        <div className="flex-1">
+                            <div className="text-white text-sm">fix: Agent buttons UI improvements</div>
+                            <div className="text-xs text-dark-500">4 hours ago • main</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             {/* Quick Actions */}
             <div className="flex gap-4">

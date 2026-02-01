@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { CHART_COLORS, getCategoryColor } from '../../constants/chart-colors';
 
 interface PieChartData {
@@ -69,54 +69,60 @@ export default function AnimatedPieChart({
         return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
     };
 
-    const renderLegend = (props: any) => {
-        const { payload } = props;
-        return (
-            <div className="flex flex-wrap justify-center gap-3 mt-4">
-                {payload.map((entry: any, index: number) => (
-                    <div key={index} className="flex items-center gap-2">
-                        <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: entry.color }}
-                        />
-                        <span className="text-dark-300 text-sm">{entry.value}</span>
-                    </div>
-                ))}
-            </div>
-        );
-    };
+    // Calculate chart height - leave room for title and legend
+    const titleHeight = title ? 32 : 0;
+    const legendHeight = showLegend ? 40 : 0;
+    const chartHeight = height - titleHeight - legendHeight;
 
     return (
-        <div className="w-full" style={{ height }}>
+        <div className="w-full flex flex-col" style={{ height }}>
             {title && (
-                <h3 className="text-lg font-semibold text-white mb-4 text-center">{title}</h3>
+                <h3 className="text-lg font-semibold text-white mb-2 text-center flex-shrink-0">{title}</h3>
             )}
-            <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                    <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={innerRadius}
-                        outerRadius={isAnimated ? 100 : 0}
-                        paddingAngle={2}
-                        dataKey="value"
-                        animationBegin={0}
-                        animationDuration={800}
-                        animationEasing="ease-out"
-                    >
-                        {chartData.map((entry, index) => (
-                            <Cell
-                                key={`cell-${index}`}
-                                fill={entry.color}
-                                stroke="none"
-                            />
-                        ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                    {showLegend && <Legend content={renderLegend} />}
-                </PieChart>
-            </ResponsiveContainer>
+            <div className="flex-1 min-h-0" style={{ height: chartHeight }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                        <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={innerRadius}
+                            outerRadius={isAnimated ? Math.min(chartHeight / 2 - 10, 100) : 0}
+                            paddingAngle={2}
+                            dataKey="value"
+                            animationBegin={0}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    fill={entry.color}
+                                    stroke="none"
+                                />
+                            ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+            {showLegend && (
+                <div className="flex flex-wrap justify-center gap-3 pt-2 flex-shrink-0">
+                    {chartData.map((entry, index) => {
+                        const percentage = total > 0 ? ((entry.value / total) * 100).toFixed(0) : 0;
+                        return (
+                            <div key={index} className="flex items-center gap-2">
+                                <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: entry.color }}
+                                />
+                                <span className="text-dark-300 text-sm">{entry.name}</span>
+                                <span className="text-dark-500 text-xs">({percentage}%)</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

@@ -47,7 +47,6 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
             <div className="flex items-center gap-2">
                 <span className="text-primary-500 font-bold text-lg">⚡</span>
                 <span className="font-semibold text-white">Wakey</span>
-                <span className="text-xs text-dark-400 ml-2">v0.1.0</span>
             </div>
 
             {/* Window controls */}
