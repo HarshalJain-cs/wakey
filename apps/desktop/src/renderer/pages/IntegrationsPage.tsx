@@ -916,6 +916,32 @@ export default function IntegrationsPage() {
                                 )}
                             </button>
                         )}
+
+                        {/* JARVIS Subscription CTA */}
+                        <div className="mt-4 p-4 bg-gradient-to-r from-purple-900/40 to-cyan-900/40 border border-purple-500/30 rounded-xl relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 animate-pulse" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-lg">✨</span>
+                                    <span className="text-white font-semibold">Unlock the Full Power of JARVIS</span>
+                                </div>
+                                <p className="text-sm text-gray-300 mb-3">
+                                    Join 10,000+ professionals who've 10x'd their productivity.
+                                    <span className="text-cyan-400 font-medium"> Limited early-bird pricing ends soon.</span>
+                                </p>
+                                <button
+                                    onClick={() => window.open('https://jarvis.wakey.app/subscribe', '_blank')}
+                                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/30 flex items-center justify-center gap-2"
+                                >
+                                    <span>🚀</span>
+                                    Get JARVIS Pro — Don't Miss Out
+                                    <ExternalLink className="w-4 h-4" />
+                                </button>
+                                <p className="text-center text-xs text-gray-500 mt-2">
+                                    🔒 30-day money-back guarantee • Cancel anytime
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </IntegrationCard>
             </div>

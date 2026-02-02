@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, X, HelpCircle, ThumbsUp, CheckCircle, XCircle, Settings, Shield } from 'lucide-react';
+import { audioService } from '../services/audio-service';
 
 interface DistractionAlertProps {
     app: string;
@@ -179,6 +180,8 @@ export function useDistractionAlert() {
 
         window.wakey.onDistractionDetected((data) => {
             setAlert(data);
+            // Play distraction alert sound
+            audioService.playEffect('distraction-alert');
         });
 
         return () => {

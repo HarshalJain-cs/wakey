@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Alert</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-app-region: drag;
+        }
+        
+        .overlay-container {
+            background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(40, 20, 60, 0.95));
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 100, 100, 0.5);
+            border-radius: 24px;
+            padding: 40px 50px;
+            text-align: center;
+            box-shadow: 
+                0 25px 80px rgba(0, 0, 0, 0.6),
+                0 0 60px rgba(255, 100, 100, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            max-width: 450px;
+            animation: pulseIn 0.3s ease-out;
+        }
+        
+        @keyframes pulseIn {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .warning-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        h1 {
+            color: #ff6b6b;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .app-name {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .app-name strong {
+            color: #ff9f43;
+        }
+        
+        .message {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .countdown {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+        
+        .countdown span {
+            color: #ff6b6b;
+            font-weight: 600;
+        }
+        
+        .btn-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #00c9ff, #92fe9d);
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 201, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay-container">
+        <div class="warning-icon">⚠️</div>
+        <h1>You're Getting Distracted!</h1>
+        <p class="app-name">Detected: <strong id="appName">Unknown App</strong></p>
+        <p class="message">
+            Stay focused! You were in the middle of deep work.<br>
+            Every distraction costs you 23 minutes to refocus.
+        </p>
+        <p class="countdown">Auto-closing in <span id="countdown">10</span> seconds</p>
+        <div class="btn-container">
+            <button class="btn btn-primary" id="backToWork">Get Back to Work</button>
+            <button class="btn btn-secondary" id="dismiss">Dismiss (5 min)</button>
+        </div>
+    </div>
+    
+    <script>
+        // Get app name from URL params
+        const params = new URLSearchParams(window.location.search);
+        const appName = params.get('app') || 'Unknown App';
+        document.getElementById('appName').textContent = appName;
+        
+        // Countdown timer
+        let seconds = 10;
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            seconds--;
+            countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(timer);
+                window.close();
+            }
+        }, 1000);
+        
+        // Button handlers
+        document.getElementById('backToWork').addEventListener('click', () => {
+            // Send message to main process to focus Wakey
+            if (window.electronAPI) {
+                window.electronAPI.focusWakey();
+            }
+            window.close();
+        });
+        
+        document.getElementById('dismiss').addEventListener('click', () => {
+            // Dismiss for 5 minutes
+            if (window.electronAPI) {
+                window.electronAPI.snoozeDistraction(5);
+            }
+            window.close();
+        });
+        
+        // Play alert sound
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 220;
+            gainNode.gain.value = 0.3;
+            oscillator.type = 'sawtooth';
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.15);
+        } catch (e) {
+            console.log('Audio not available');
+        }
+    </script>
+</body>
+</html>

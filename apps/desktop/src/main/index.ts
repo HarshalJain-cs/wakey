@@ -211,6 +211,9 @@ const store = new Store<StoreSchema>({
 });
 
 let mainWindow: BrowserWindow | null = null;
+let distractionOverlayWindow: BrowserWindow | null = null;
+let lastDistractionAlertTime: number = 0;
+const DISTRACTION_COOLDOWN_MS = 30000; // 30 seconds between alerts
 let tray: Tray | null = null;
 let isTracking = false;
 let trackingInterval: NodeJS.Timeout | null = null;
@@ -619,6 +622,66 @@ function isDistraction(appName: string): boolean {
 }
 
 /**
+ * Shows a distraction overlay window on top of all apps
+ */
+function showDistractionOverlay(appName: string): void {
+    // Check cooldown to avoid spamming
+    const now = Date.now();
+    if (now - lastDistractionAlertTime < DISTRACTION_COOLDOWN_MS) {
+        return;
+    }
+    lastDistractionAlertTime = now;
+
+    // Close existing overlay if open
+    if (distractionOverlayWindow && !distractionOverlayWindow.isDestroyed()) {
+        distractionOverlayWindow.close();
+    }
+
+    // Create overlay window
+    distractionOverlayWindow = new BrowserWindow({
+        width: 500,
+        height: 380,
+        frame: false,
+        transparent: true,
+        alwaysOnTop: true,
+        skipTaskbar: true,
+        resizable: false,
+        movable: true,
+        center: true,
+        focusable: true,
+        hasShadow: true,
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+        },
+    });
+
+    // Set always on top with highest level
+    distractionOverlayWindow.setAlwaysOnTop(true, 'screen-saver');
+
+    // Load overlay HTML with app name as query param
+    const overlayPath = join(__dirname, 'distraction-overlay.html');
+    distractionOverlayWindow.loadFile(overlayPath, {
+        query: { app: appName }
+    });
+
+    // Auto-close after 12 seconds
+    setTimeout(() => {
+        if (distractionOverlayWindow && !distractionOverlayWindow.isDestroyed()) {
+            distractionOverlayWindow.close();
+            distractionOverlayWindow = null;
+        }
+    }, 12000);
+
+    // Handle close
+    distractionOverlayWindow.on('closed', () => {
+        distractionOverlayWindow = null;
+    });
+
+    logger.info(`Distraction overlay shown for: ${appName}`);
+}
+
+/**
  * Gets today's date as an ISO date string (YYYY-MM-DD).
  * Used for filtering activities and sessions by day.
  */
@@ -697,6 +760,8 @@ function logActivity(appName: string, windowTitle: string): void {
 
     if (distraction && mainWindow) {
         mainWindow.webContents.send('distraction-detected', { app: appName, title: windowTitle });
+        // Show overlay window on top of distracting app
+        showDistractionOverlay(appName);
     }
 
     mainWindow?.webContents.send('activity-update', { app: appName, title: windowTitle, category, isDistraction: distraction });
