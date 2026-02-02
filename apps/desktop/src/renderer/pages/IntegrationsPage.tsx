@@ -50,6 +50,7 @@ export default function IntegrationsPage() {
     const [discordWebhook, setDiscordWebhook] = useState('');
     const [githubToken, setGithubToken] = useState('');
     const [todoistToken, setTodoistToken] = useState('');
+    const [githubError, setGithubError] = useState<string | null>(null);
 
     useEffect(() => {
         refreshAll();
@@ -1139,7 +1140,7 @@ export default function IntegrationsPage() {
                                     <input
                                         type="password"
                                         value={githubToken}
-                                        onChange={(e) => setGithubToken(e.target.value)}
+                                        onChange={(e) => { setGithubToken(e.target.value); setGithubError(null); }}
                                         placeholder="ghp_..."
                                         className="input-field w-full"
                                     />
@@ -1147,13 +1148,27 @@ export default function IntegrationsPage() {
                                         Generate at github.com/settings/tokens
                                     </p>
                                 </div>
+                                {githubError && (
+                                    <div className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                                        <p className="text-sm text-red-400">{githubError}</p>
+                                    </div>
+                                )}
                                 <button
                                     onClick={async () => {
                                         if (!githubToken.trim()) return;
                                         setLoading('github');
-                                        const result = await githubService.connect(githubToken);
-                                        if (result.success) {
-                                            setGithubToken('');
+                                        setGithubError(null);
+                                        try {
+                                            const result = await githubService.connect(githubToken);
+                                            if (result.success) {
+                                                setGithubToken('');
+                                            } else {
+                                                setGithubError(result.error || 'Failed to connect. Check your token.');
+                                            }
+                                        } catch (err) {
+                                            console.error('GitHub connection error:', err);
+                                            setGithubError('Network error. Check your internet connection.');
                                         }
                                         setGithub(githubService.getConfig());
                                         setLoading(null);
@@ -1478,6 +1493,117 @@ export default function IntegrationsPage() {
                     </div>
                 </IntegrationCard>
             </div>
+
+            {/* Phase 3: Advanced Integrations */}
+            <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-purple-400" />
+                    Advanced Integrations
+                    <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">New</span>
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Todoist */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-red-500 to-red-600">
+                                <CheckSquare className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Todoist</h3>
+                                <p className="text-xs text-dark-400">Task sync</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* Notion */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-gray-700 to-gray-800">
+                                <span className="text-xl">📝</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Notion</h3>
+                                <p className="text-xs text-dark-400">Database sync</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* Asana */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-pink-500">
+                                <span className="text-xl">🎯</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Asana</h3>
+                                <p className="text-xs text-dark-400">Project sync</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* Microsoft Teams */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
+                                <span className="text-xl">👥</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Microsoft Teams</h3>
+                                <p className="text-xs text-dark-400">Presence sync</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* GitHub */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-gray-700 to-gray-900">
+                                <Github className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">GitHub</h3>
+                                <p className="text-xs text-dark-400">Issues & PRs</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* Linear */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+                                <span className="text-xl">📐</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Linear</h3>
+                                <p className="text-xs text-dark-400">Issue tracking</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* Jira */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700">
+                                <span className="text-xl">🔷</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Jira</h3>
+                                <p className="text-xs text-dark-400">Sprint tracking</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 }
+

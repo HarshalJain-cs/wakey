@@ -26,7 +26,7 @@ const mockUsers = Array.from({ length: STRESS_CONFIG.concurrentUsers }, (_, i) =
 }));
 
 // Mock API key for testing
-const mockApiKey = 'wk_test_stress_key_123456789012345678901234567890';
+const _mockApiKey = 'wk_test_stress_key_123456789012345678901234567890';
 
 // Stress test results
 const results = {
@@ -40,7 +40,7 @@ const results = {
     endTime: 0,
 };
 
-async function simulateApiCall(endpoint: string, method: string = 'GET', data?: any): Promise<{ success: boolean; responseTime: number; error?: string }> {
+async function simulateApiCall(endpoint: string, _method: string = 'GET', _data?: unknown): Promise<{ success: boolean; responseTime: number; error?: string }> {
     const startTime = performance.now();
 
     try {

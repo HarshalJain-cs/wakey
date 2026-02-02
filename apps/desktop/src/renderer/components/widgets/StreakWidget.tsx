@@ -63,7 +63,8 @@ export default function StreakWidget() {
                 checkDate.setDate(checkDate.getDate() - 1);
             }
 
-            while (true) {
+            // Check consecutive days (max 365 to prevent infinite loop)
+            for (let i = 0; i < 365; i++) {
                 const dateStr = checkDate.toISOString().split('T')[0];
                 if (goalMetDates.includes(dateStr)) {
                     currentStreak++;

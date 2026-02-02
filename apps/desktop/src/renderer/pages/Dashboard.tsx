@@ -7,6 +7,7 @@ import CalendarWidget from '../components/widgets/CalendarWidget';
 import TaskListWidget from '../components/widgets/TaskListWidget';
 import AIInsightsWidget from '../components/widgets/AIInsightsWidget';
 import GoalsWidget from '../components/widgets/GoalsWidget';
+import AdvancedAnalyticsWidget from '../components/widgets/AdvancedAnalyticsWidget';
 
 interface DashboardProps {
     isTracking: boolean;
@@ -27,7 +28,8 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
     { id: 'goals', name: 'Goals', visible: true, order: 3, colSpan: 1 },
     { id: 'tasks', name: 'Task List', visible: true, order: 4, colSpan: 1 },
     { id: 'ai', name: 'AI Insights', visible: true, order: 5, colSpan: 1 },
-    { id: 'calendar', name: 'Calendar', visible: true, order: 6, colSpan: 2 },
+    { id: 'analytics', name: 'Advanced Analytics', visible: true, order: 6, colSpan: 1 },
+    { id: 'calendar', name: 'Calendar', visible: true, order: 7, colSpan: 2 },
 ];
 
 const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
@@ -37,6 +39,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
     goals: GoalsWidget,
     tasks: TaskListWidget,
     ai: AIInsightsWidget,
+    analytics: AdvancedAnalyticsWidget,
     calendar: CalendarWidget,
 };
 

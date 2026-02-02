@@ -22,7 +22,8 @@ import {
     Target,
     Music,
     Keyboard,
-    HelpCircle
+    HelpCircle,
+    Heart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -48,6 +49,7 @@ const navItems = [
     { path: '/agents', icon: Bot, label: 'Agents' },
     { path: '/flashcards', icon: GraduationCap, label: 'Flashcards' },
     { path: '/achievements', icon: Trophy, label: 'Achievements' },
+    { path: '/health', icon: Heart, label: 'Health' },
     { path: '/cloud-sync', icon: Cloud, label: 'Cloud Sync' },
     { path: '/shortcuts', icon: Keyboard, label: 'Shortcuts' },
     { path: '/settings', icon: Settings, label: 'Settings' },

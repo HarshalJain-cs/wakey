@@ -7,6 +7,7 @@ interface TitleBarProps {
 export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
     const handleMinimize = async () => {
         try {
+            console.log('[TitleBar] Minimize clicked');
             if (window.wakey?.minimize) {
                 await window.wakey.minimize();
             } else {
@@ -19,6 +20,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
 
     const handleMaximize = async () => {
         try {
+            console.log('[TitleBar] Maximize clicked');
             if (window.wakey?.maximize) {
                 await window.wakey.maximize();
             } else {
@@ -31,6 +33,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
 
     const handleClose = async () => {
         try {
+            console.log('[TitleBar] Close clicked');
             if (window.wakey?.close) {
                 await window.wakey.close();
             } else {
@@ -42,19 +45,26 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
     };
 
     return (
-        <div className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800" style={{ webkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div
+            className="titlebar h-10 bg-dark-950 flex items-center justify-between px-4 border-b border-dark-800"
+            style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        >
             {/* App title */}
             <div className="flex items-center gap-2">
                 <span className="text-primary-500 font-bold text-lg">⚡</span>
                 <span className="font-semibold text-white">Wakey</span>
             </div>
 
-            {/* Window controls */}
-            <div className="flex items-center gap-1" style={{ webkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            {/* Window controls - must be no-drag to receive clicks */}
+            <div
+                className="flex items-center gap-1"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
                 <button
                     onClick={handleMinimize}
                     className="p-2 rounded hover:bg-dark-700 transition-colors"
                     title="Minimize"
+                    type="button"
                 >
                     <Minus className="w-4 h-4 text-dark-400" />
                 </button>
@@ -62,6 +72,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
                     onClick={handleMaximize}
                     className="p-2 rounded hover:bg-dark-700 transition-colors"
                     title="Maximize"
+                    type="button"
                 >
                     <Square className="w-3.5 h-3.5 text-dark-400" />
                 </button>
@@ -69,6 +80,7 @@ export default function TitleBar({ darkMode: _darkMode }: TitleBarProps) {
                     onClick={handleClose}
                     className="p-2 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors"
                     title="Close to tray"
+                    type="button"
                 >
                     <X className="w-4 h-4 text-dark-400" />
                 </button>

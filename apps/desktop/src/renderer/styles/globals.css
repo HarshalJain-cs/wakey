@@ -30,11 +30,21 @@
 /* Draggable titlebar region */
 .titlebar {
   -webkit-app-region: drag;
+  user-select: none;
 }
 
 .titlebar button,
-.titlebar input {
+.titlebar input,
+.titlebar a {
   -webkit-app-region: no-drag;
+  cursor: pointer;
+  position: relative;
+  z-index: 100;
+}
+
+/* Ensure window control buttons are always clickable */
+.titlebar button:hover {
+  cursor: pointer;
 }
 
 /* Widget card styles */

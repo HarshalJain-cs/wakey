@@ -87,15 +87,11 @@ class GitHubIntegrationService {
     // Connect with personal access token
     async connect(accessToken: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(`${this.API_BASE}/user`, {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                },
-            });
+            // Use IPC bridge to bypass CORS in Electron renderer
+            const response = await window.wakey.fetchGitHub('/user', accessToken);
 
-            if (response.ok) {
-                const user = await response.json();
+            if (response.ok && response.data) {
+                const user = response.data;
                 this.config = {
                     ...this.config,
                     enabled: true,
@@ -107,7 +103,8 @@ class GitHubIntegrationService {
                 this.saveConfig();
                 return { success: true };
             } else {
-                return { success: false, error: 'Invalid token or unauthorized' };
+                console.error('GitHub API error:', response.error);
+                return { success: false, error: response.error || 'Invalid token or unauthorized' };
             }
         } catch (error) {
             console.error('GitHub connection error:', error);

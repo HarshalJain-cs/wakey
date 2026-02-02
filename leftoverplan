@@ -1,0 +1,97 @@
+# Wakey — Leftover Plan (Done vs Remaining)
+
+**Date:** February 2, 2026  
+**Scope:** MASTER_IMPLEMENTATION_PLAN.md coverage
+
+---
+
+## What’s Done (or Partially Implemented)
+
+### Foundation / Architecture
+- Monorepo structure with `apps/desktop` and shared `packages/*`.
+- Electron main/preload/renderer split with IPC bridge.
+- Activity tracking pipeline in main process (polling + store).
+- Electron build configuration and packaging script scaffolding present.
+
+### Core Features
+- Focus timer UI and logic (Pomodoro + presets).
+- Task management UI and CRUD (local store).
+- Dashboard + widgets (activity, focus, insights, streaks).
+- Knowledge management (notes, knowledge graph, flashcards).
+- Achievements page + enhanced achievements service (scaffolded).
+
+### AI & Insights (scaffolded)
+- AI insights widget + service (mock data).
+- Multi‑model consensus service (mock provider routing).
+- “Developer Dashboard” GitHub integration view (REST + GraphQL).
+
+### Health & Wellness (scaffolded)
+- Health page UI.
+- Burnout, sleep, and wearable services (mock data).
+- Wearable integration service with provider list and mock sync.
+
+### Integrations (scaffolded)
+- GitHub, Linear, Jira, Notion, Slack, Todoist integration classes.
+- OAuth flow scaffolding in integrations.
+- IPC bridge for GitHub REST + GraphQL via main process.
+
+### Advanced Features (scaffolded)
+- Recurring task service.
+- Task dependency service.
+- Team collaboration service.
+- Offline sync service (queueing mock).
+
+### Security & Utilities (partial)
+- Secure storage helper (keytar + encryption) present.
+- Input sanitization utilities (DOMPurify + URL/filename sanitizers).
+- Audit logger scaffold.
+
+---
+
+## What’s Remaining (From MASTER_IMPLEMENTATION_PLAN.md)
+
+### Phase 1 — Foundation
+- **Database migration to SQLite** (schema + real storage in main).
+- **Error handling** (retry/structured logging/event bus integration).
+- **Input validation** (Zod across IPC + services).
+- **Testing foundation** (unit test coverage >40%, CI config).
+
+### Phase 2 — Core Excellence
+- **Enhanced focus features** (fatigue scoring, adaptive breaks wired to real data).
+- **Deep work tracking** (real metrics, context switching, flow detection).
+- **Trends & predictive analytics** (weekly/monthly views + reports).
+- **Gamification v2** (challenges, leaderboards, real progress).
+- **Health/wearables** (real device APIs, not mocks).
+
+### Phase 3 — Integrations
+- Real token exchange + refresh for OAuth providers.
+- Two‑way sync for tasks/issues/calendar.
+- Webhook ingestion where supported.
+- 100+ integrations target: only a subset scaffolded.
+
+### Phase 4 — Advanced Features
+- Recurring tasks + dependencies wired to persistence.
+- Team collaboration with real workspaces, roles, sharing, and sync.
+- Offline sync queue with conflict resolution.
+- Workflow automation builder.
+
+### Phase 5 — Polish & Distribution
+- UX polish (visualization layers, accessibility, onboarding).
+- Performance profiling and optimization targets.
+- Security hardening (keychain storage everywhere, audit log storage, CSP tightening).
+- Production build pipeline (signing, auto‑update release flow, installers).
+
+### Cross‑Cutting Gaps
+- **Testing**: coverage minimal.
+- **Documentation**: user/dev guides not created.
+- **Monitoring/telemetry**: no error reporting or diagnostics.
+- **Data export**: CSV/JSON/PDF not implemented for core entities.
+
+---
+
+## Next Recommended Execution Order
+1. Foundation (DB, validation, logging, tests).
+2. Wire core features to real data (focus, analytics).
+3. Finish top integrations with actual OAuth + sync.
+4. Advanced features + automation.
+5. Polish + distribution pipeline.

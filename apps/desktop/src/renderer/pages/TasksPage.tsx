@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Circle, CheckCircle, Trash2, Clock, Flag, ChevronDown } from 'lucide-react';
+import { Plus, Circle, CheckCircle, Trash2, Clock, Flag, ChevronDown, RefreshCw, Calendar, Repeat } from 'lucide-react';
+import { recurringTaskService, RecurringTask } from '../services/recurring-task-service';
 
 interface Task {
     id: number;
@@ -18,6 +19,12 @@ export default function TasksPage() {
     const [filter, setFilter] = useState<'all' | 'todo' | 'done'>('all');
     const [loading, setLoading] = useState(true);
 
+    // Recurring tasks state
+    const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
+    const [showRecurringForm, setShowRecurringForm] = useState(false);
+    const [recurringTitle, setRecurringTitle] = useState('');
+    const [recurringPattern, setRecurringPattern] = useState('');
+
     const priorityColors = {
         high: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
         medium: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30' },
@@ -26,6 +33,7 @@ export default function TasksPage() {
 
     useEffect(() => {
         loadTasks();
+        loadRecurringTasks();
     }, []);
 
     const loadTasks = async () => {
@@ -43,6 +51,10 @@ export default function TasksPage() {
         }
     };
 
+    const loadRecurringTasks = () => {
+        setRecurringTasks(recurringTaskService.getActiveRecurringTasks());
+    };
+
     const addTask = async () => {
         if (!newTask.trim() || !window.wakey) return;
 
@@ -54,6 +66,22 @@ export default function TasksPage() {
         } catch (error) {
             console.error('Failed to create task:', error);
         }
+    };
+
+    const addRecurringTask = async () => {
+        if (!recurringTitle.trim() || !recurringPattern.trim()) return;
+
+        const pattern = recurringTaskService.parseRecurrence(recurringPattern);
+        if (!pattern) {
+            alert('Could not parse recurrence pattern. Try: "every day", "every monday", "every 2 weeks"');
+            return;
+        }
+
+        await recurringTaskService.createRecurringTask(recurringTitle, pattern);
+        setRecurringTitle('');
+        setRecurringPattern('');
+        setShowRecurringForm(false);
+        loadRecurringTasks();
     };
 
     const toggleTask = async (task: Task) => {
@@ -85,6 +113,7 @@ export default function TasksPage() {
 
     const completedCount = tasks.filter(t => t.status === 'done').length;
     const todoCount = tasks.filter(t => t.status !== 'done').length;
+    const recurringStats = recurringTaskService.getStatistics();
 
     return (
         <div className="max-w-3xl mx-auto">
@@ -108,6 +137,83 @@ export default function TasksPage() {
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Recurring Tasks Section */}
+            <div className="bg-dark-800 rounded-xl p-4 mb-6 border border-dark-700">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Repeat className="w-5 h-5 text-purple-400" />
+                        <h2 className="font-semibold text-white">Recurring Tasks</h2>
+                        <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-400 rounded-full">
+                            {recurringStats.active} active
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setShowRecurringForm(!showRecurringForm)}
+                        className="btn-secondary text-sm flex items-center gap-1"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Recurring
+                    </button>
+                </div>
+
+                {showRecurringForm && (
+                    <div className="mb-4 p-4 bg-dark-700 rounded-lg space-y-3">
+                        <input
+                            type="text"
+                            value={recurringTitle}
+                            onChange={(e) => setRecurringTitle(e.target.value)}
+                            placeholder="Task title (e.g., Review weekly goals)"
+                            className="input-field w-full"
+                        />
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={recurringPattern}
+                                onChange={(e) => setRecurringPattern(e.target.value)}
+                                placeholder="Recurrence (e.g., every monday, daily, every 2 weeks)"
+                                className="input-field flex-1"
+                            />
+                            <button onClick={addRecurringTask} className="btn-primary px-4">
+                                Create
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {recurringTasks.length > 0 ? (
+                    <div className="space-y-2">
+                        {recurringTasks.slice(0, 3).map((rt) => (
+                            <div key={rt.id} className="flex items-center justify-between p-3 bg-dark-700/50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <RefreshCw className="w-4 h-4 text-purple-400" />
+                                    <div>
+                                        <span className="text-white text-sm">{rt.title}</span>
+                                        <div className="text-xs text-dark-400">
+                                            {rt.recurrence.type} • {rt.completedOccurrences} completed
+                                        </div>
+                                    </div>
+                                </div>
+                                {rt.nextOccurrence && (
+                                    <div className="flex items-center gap-1 text-xs text-dark-400">
+                                        <Calendar className="w-3 h-3" />
+                                        Next: {new Date(rt.nextOccurrence).toLocaleDateString()}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {recurringTasks.length > 3 && (
+                            <button className="text-sm text-primary-400 hover:text-primary-300">
+                                View all {recurringTasks.length} recurring tasks →
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="text-center py-4 text-dark-400 text-sm">
+                        No recurring tasks yet. Create one to build habits!
+                    </div>
+                )}
             </div>
 
             {/* Add Task */}
@@ -228,3 +334,4 @@ export default function TasksPage() {
         </div>
     );
 }
+

@@ -940,7 +940,7 @@ function createWindow(): void {
         titleBarStyle: 'hidden',
         backgroundColor: '#0f172a',
         webPreferences: {
-            preload: join(__dirname, is.dev ? '../preload/index.js' : '../preload/index.cjs'),
+            preload: join(__dirname, '../preload/index.cjs'),
             sandbox: false,
             contextIsolation: true,
             nodeIntegration: false,
@@ -1521,6 +1521,60 @@ function setupIpcHandlers(): void {
         delete encryptedKeys[key];
         store.set('secureApiKeys', encryptedKeys);
         return true;
+    });
+
+    // GitHub API proxy to bypass CORS
+    ipcMain.handle('fetch-github', async (_e, endpoint: string, accessToken: string) => {
+        try {
+            const response = await fetch(`https://api.github.com${endpoint}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'Wakey-Desktop-App',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return { ok: true, status: response.status, data };
+            } else {
+                const errorText = await response.text();
+                return { ok: false, status: response.status, error: errorText };
+            }
+        } catch (error) {
+            console.error('GitHub API fetch error:', error);
+            return { ok: false, status: 0, error: (error as Error).message };
+        }
+    });
+
+    // GitHub GraphQL API for contribution data
+    ipcMain.handle('fetch-github-graphql', async (_e, query: string, accessToken: string) => {
+        console.log('[GitHub GraphQL] Making request...');
+        try {
+            const response = await fetch('https://api.github.com/graphql', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Wakey-Desktop-App',
+                },
+                body: JSON.stringify({ query }),
+            });
+
+            console.log('[GitHub GraphQL] Response status:', response.status);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[GitHub GraphQL] Got data, totalContributions:', data?.data?.user?.contributionsCollection?.contributionCalendar?.totalContributions);
+                return { ok: true, status: response.status, data };
+            } else {
+                const errorText = await response.text();
+                console.error('[GitHub GraphQL] Error:', errorText);
+                return { ok: false, status: response.status, error: errorText };
+            }
+        } catch (error) {
+            console.error('GitHub GraphQL error:', error);
+            return { ok: false, status: 0, error: (error as Error).message };
+        }
     });
 
 }

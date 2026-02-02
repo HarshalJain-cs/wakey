@@ -123,6 +123,12 @@ contextBridge.exposeInMainWorld('wakey', {
     removeAllListeners: (channel: string) => {
         ipcRenderer.removeAllListeners(channel);
     },
+
+    // GitHub API (routes through main process to bypass CORS)
+    fetchGitHub: (endpoint: string, accessToken: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> =>
+        ipcRenderer.invoke('fetch-github', endpoint, accessToken),
+    fetchGitHubGraphQL: (query: string, accessToken: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> =>
+        ipcRenderer.invoke('fetch-github-graphql', query, accessToken),
 });
 
 // Validate that the API is properly exposed
@@ -237,6 +243,8 @@ declare global {
             setSecureApiKey: (key: string, value: string) => Promise<boolean>;
             deleteSecureApiKey: (key: string) => Promise<boolean>;
             removeAllListeners: (channel: string) => void;
+            fetchGitHub: (endpoint: string, accessToken: string) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
+            fetchGitHubGraphQL: (query: string, accessToken: string) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
         };
     }
 }

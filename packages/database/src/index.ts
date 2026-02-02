@@ -5,26 +5,26 @@ import { app } from 'electron';
 let db: Database.Database | null = null;
 
 export function getDatabase(): Database.Database {
-    if (db) return db;
+  if (db) return db;
 
-    // Use app data directory for database
-    const dbPath = process.env.NODE_ENV === 'development'
-        ? join(__dirname, '../../wakey.db')
-        : join(app.getPath('userData'), 'wakey.db');
+  // Use app data directory for database
+  const dbPath = process.env.NODE_ENV === 'development'
+    ? join(__dirname, '../../wakey.db')
+    : join(app.getPath('userData'), 'wakey.db');
 
-    db = new Database(dbPath);
+  db = new Database(dbPath);
 
-    // Enable WAL mode for better performance
-    db.pragma('journal_mode = WAL');
+  // Enable WAL mode for better performance
+  db.pragma('journal_mode = WAL');
 
-    // Initialize schema
-    initializeSchema(db);
+  // Initialize schema
+  initializeSchema(db);
 
-    return db;
+  return db;
 }
 
 function initializeSchema(db: Database.Database): void {
-    db.exec(`
+  db.exec(`
     -- Activities (core tracking)
     CREATE TABLE IF NOT EXISTS activities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,65 +103,110 @@ function initializeSchema(db: Database.Database): void {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Achievements (from Master Plan Section 17.1)
+    CREATE TABLE IF NOT EXISTS achievements (
+      id TEXT PRIMARY KEY,
+      achievement_id TEXT NOT NULL,
+      unlocked_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      progress REAL DEFAULT 0,
+      metadata TEXT
+    );
+
+    -- Streaks (from Master Plan Section 17.1)
+    CREATE TABLE IF NOT EXISTS streaks (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      current_count INTEGER DEFAULT 0,
+      longest_count INTEGER DEFAULT 0,
+      last_activity_date TEXT,
+      started_at TEXT,
+      metadata TEXT
+    );
+
+    -- Integration Tokens - encrypted (from Master Plan Section 17.1)
+    CREATE TABLE IF NOT EXISTS integration_tokens (
+      id TEXT PRIMARY KEY,
+      integration_id TEXT NOT NULL UNIQUE,
+      encrypted_data TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Sync Queue for offline operations (from Master Plan Section 17.1)
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      data TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      attempts INTEGER DEFAULT 0,
+      last_attempt TEXT,
+      error TEXT
+    );
+
     -- Indexes for performance
     CREATE INDEX IF NOT EXISTS idx_activities_created_at ON activities(created_at);
     CREATE INDEX IF NOT EXISTS idx_activities_app_name ON activities(app_name);
     CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+    CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
     CREATE INDEX IF NOT EXISTS idx_focus_sessions_started_at ON focus_sessions(started_at);
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_created_at ON sync_queue(created_at);
   `);
 }
 
 // Activity functions
 export function logActivity(
-    appName: string,
-    windowTitle: string | null,
-    url: string | null,
-    category: string | null
+  appName: string,
+  windowTitle: string | null,
+  url: string | null,
+  category: string | null
 ): number {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     INSERT INTO activities (app_name, window_title, url, category)
     VALUES (?, ?, ?, ?)
   `);
-    const result = stmt.run(appName, windowTitle, url, category);
-    return result.lastInsertRowid as number;
+  const result = stmt.run(appName, windowTitle, url, category);
+  return result.lastInsertRowid as number;
 }
 
 export function updateActivityDuration(id: number, seconds: number): void {
-    const db = getDatabase();
-    const stmt = db.prepare('UPDATE activities SET duration_seconds = ? WHERE id = ?');
-    stmt.run(seconds, id);
+  const db = getDatabase();
+  const stmt = db.prepare('UPDATE activities SET duration_seconds = ? WHERE id = ?');
+  stmt.run(seconds, id);
 }
 
 export function getTodayActivities(): Activity[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     SELECT * FROM activities 
     WHERE date(created_at) = date('now', 'localtime')
     ORDER BY created_at DESC
   `);
-    return stmt.all() as Activity[];
+  return stmt.all() as Activity[];
 }
 
 // Focus session functions
 export function startFocusSession(type: 'focus' | 'break' | 'meeting', durationMinutes: number): number {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     INSERT INTO focus_sessions (type, duration_minutes, started_at)
     VALUES (?, ?, datetime('now', 'localtime'))
   `);
-    const result = stmt.run(type, durationMinutes);
-    return result.lastInsertRowid as number;
+  const result = stmt.run(type, durationMinutes);
+  return result.lastInsertRowid as number;
 }
 
 export function endFocusSession(
-    id: number,
-    qualityScore: number,
-    distractions: number,
-    switches: number
+  id: number,
+  qualityScore: number,
+  distractions: number,
+  switches: number
 ): void {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     UPDATE focus_sessions 
     SET ended_at = datetime('now', 'localtime'),
         quality_score = ?,
@@ -169,102 +214,102 @@ export function endFocusSession(
         context_switches = ?
     WHERE id = ?
   `);
-    stmt.run(qualityScore, distractions, switches, id);
+  stmt.run(qualityScore, distractions, switches, id);
 }
 
 export function getTodaySessions(): FocusSession[] {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     SELECT * FROM focus_sessions 
     WHERE date(started_at) = date('now', 'localtime')
     ORDER BY started_at DESC
   `);
-    return stmt.all() as FocusSession[];
+  return stmt.all() as FocusSession[];
 }
 
 // Task functions
 export function createTask(task: Omit<Task, 'id' | 'created_at'>): number {
-    const db = getDatabase();
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const stmt = db.prepare(`
     INSERT INTO tasks (title, description, priority, status, project_id, estimated_minutes, due_date)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-    const result = stmt.run(
-        task.title,
-        task.description,
-        task.priority,
-        task.status,
-        task.project_id,
-        task.estimated_minutes,
-        task.due_date
-    );
-    return result.lastInsertRowid as number;
+  const result = stmt.run(
+    task.title,
+    task.description,
+    task.priority,
+    task.status,
+    task.project_id,
+    task.estimated_minutes,
+    task.due_date
+  );
+  return result.lastInsertRowid as number;
 }
 
 export function updateTaskStatus(id: number, status: 'todo' | 'in_progress' | 'done'): void {
-    const db = getDatabase();
-    const completedAt = status === 'done' ? "datetime('now', 'localtime')" : 'NULL';
-    const stmt = db.prepare(`
+  const db = getDatabase();
+  const completedAt = status === 'done' ? "datetime('now', 'localtime')" : 'NULL';
+  const stmt = db.prepare(`
     UPDATE tasks 
     SET status = ?, completed_at = ${completedAt}
     WHERE id = ?
   `);
-    stmt.run(status, id);
+  stmt.run(status, id);
 }
 
 export function getTasks(status?: string): Task[] {
-    const db = getDatabase();
-    const query = status
-        ? 'SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC'
-        : 'SELECT * FROM tasks ORDER BY created_at DESC';
-    const stmt = db.prepare(query);
-    return (status ? stmt.all(status) : stmt.all()) as Task[];
+  const db = getDatabase();
+  const query = status
+    ? 'SELECT * FROM tasks WHERE status = ? ORDER BY created_at DESC'
+    : 'SELECT * FROM tasks ORDER BY created_at DESC';
+  const stmt = db.prepare(query);
+  return (status ? stmt.all(status) : stmt.all()) as Task[];
 }
 
 // Types
 export interface Activity {
-    id: number;
-    app_name: string;
-    window_title: string | null;
-    url: string | null;
-    category: string | null;
-    duration_seconds: number;
-    is_distraction: number;
-    screenshot_path: string | null;
-    created_at: string;
+  id: number;
+  app_name: string;
+  window_title: string | null;
+  url: string | null;
+  category: string | null;
+  duration_seconds: number;
+  is_distraction: number;
+  screenshot_path: string | null;
+  created_at: string;
 }
 
 export interface FocusSession {
-    id: number;
-    type: 'focus' | 'break' | 'meeting';
-    duration_minutes: number;
-    quality_score: number | null;
-    distractions_count: number;
-    context_switches: number;
-    started_at: string;
-    ended_at: string | null;
+  id: number;
+  type: 'focus' | 'break' | 'meeting';
+  duration_minutes: number;
+  quality_score: number | null;
+  distractions_count: number;
+  context_switches: number;
+  started_at: string;
+  ended_at: string | null;
 }
 
 export interface Task {
-    id: number;
-    title: string;
-    description: string | null;
-    priority: 'high' | 'medium' | 'low';
-    status: 'todo' | 'in_progress' | 'done';
-    project_id: number | null;
-    estimated_minutes: number | null;
-    actual_minutes: number;
-    due_date: string | null;
-    created_at: string;
-    completed_at: string | null;
+  id: number;
+  title: string;
+  description: string | null;
+  priority: 'high' | 'medium' | 'low';
+  status: 'todo' | 'in_progress' | 'done';
+  project_id: number | null;
+  estimated_minutes: number | null;
+  actual_minutes: number;
+  due_date: string | null;
+  created_at: string;
+  completed_at: string | null;
 }
 
 export interface Project {
-    id: number;
-    name: string;
-    client_name: string | null;
-    hourly_rate: number | null;
-    budget: number | null;
-    status: string;
-    created_at: string;
+  id: number;
+  name: string;
+  client_name: string | null;
+  hourly_rate: number | null;
+  budget: number | null;
+  status: string;
+  created_at: string;
 }

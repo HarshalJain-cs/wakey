@@ -25,6 +25,7 @@ const FlashcardsPage = lazy(() => import('./pages/FlashcardsPage'));
 const ResearchPage = lazy(() => import('./pages/ResearchPage'));
 const CloudSyncPage = lazy(() => import('./pages/CloudSyncPage'));
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
+const HealthPage = lazy(() => import('./pages/HealthPage'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const MusicPage = lazy(() => import('./pages/MusicPage'));
@@ -282,6 +283,7 @@ export default function App() {
                             <Route path="/flashcards" element={<FlashcardsPage />} />
                             <Route path="/cloud-sync" element={<CloudSyncPage />} />
                             <Route path="/achievements" element={<AchievementsPage />} />
+                            <Route path="/health" element={<HealthPage />} />
                             <Route path="/goals" element={<GoalsPage />} />
                             <Route path="/music" element={<MusicPage />} />
                             <Route path="/shortcuts" element={<ShortcutsPage />} />

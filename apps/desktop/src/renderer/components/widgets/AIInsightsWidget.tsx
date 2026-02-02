@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, RefreshCw, TrendingUp, Brain, Lightbulb, AlertCircle } from 'lucide-react';
+import { Sparkles, RefreshCw, TrendingUp, Brain, Lightbulb, Send, Zap, AlertTriangle, Trophy, Heart } from 'lucide-react';
+import { enhancedAIInsightsService, ProactiveInsight } from '../../services/enhanced-ai-insights-service';
 
 interface Insight {
-    id: number;
+    id: string;
     text: string;
-    type: 'tip' | 'warning' | 'success';
+    type: 'tip' | 'warning' | 'success' | 'opportunity' | 'coaching' | 'achievement';
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+    actions?: { label: string; type: string }[];
 }
 
 export default function AIInsightsWidget() {
     const [insights, setInsights] = useState<Insight[]>([]);
     const [loading, setLoading] = useState(true);
     const [prompt, setPrompt] = useState('');
+    const [aiResponse, setAiResponse] = useState<string | null>(null);
+    const [askingAI, setAskingAI] = useState(false);
 
     useEffect(() => {
         generateInsights();
@@ -18,77 +23,36 @@ export default function AIInsightsWidget() {
 
     const generateInsights = async () => {
         setLoading(true);
-        if (!window.wakey) {
-            setInsights([{
-                id: 1,
-                text: 'Start tracking to get personalized AI insights about your productivity!',
-                type: 'tip',
-            }]);
-            setLoading(false);
-            return;
-        }
         try {
-            const stats = await window.wakey.getTodayStats();
+            // Use enhanced AI insights service
+            const proactiveInsights = await enhancedAIInsightsService.generateProactiveInsights();
 
-            // Generate insights based on data
-            const newInsights: Insight[] = [];
+            // Convert to UI format
+            const uiInsights: Insight[] = proactiveInsights.map((insight: ProactiveInsight) => ({
+                id: insight.id,
+                text: `${insight.title}: ${insight.description}`,
+                type: insight.type === 'warning' ? 'warning' :
+                    insight.type === 'opportunity' ? 'success' :
+                        insight.type === 'achievement' ? 'achievement' :
+                            insight.type === 'coaching' ? 'coaching' : 'tip',
+                priority: insight.priority,
+                actions: insight.actions.map(a => ({ label: a.label, type: a.type }))
+            }));
 
-            if (stats.focusTime < 30) {
-                newInsights.push({
-                    id: 1,
-                    text: 'Start a 25-minute focus session to build momentum. Small wins lead to big progress!',
+            // Fallback if no insights
+            if (uiInsights.length === 0) {
+                setInsights([{
+                    id: 'default',
+                    text: 'Start tracking to get personalized AI insights about your productivity!',
                     type: 'tip',
-                });
-            } else if (stats.focusTime > 120) {
-                newInsights.push({
-                    id: 1,
-                    text: `Great job! You've focused for ${Math.floor(stats.focusTime / 60)}h ${stats.focusTime % 60}m today. Keep it up!`,
-                    type: 'success',
-                });
-            }
-
-            if (stats.distractions > 3) {
-                newInsights.push({
-                    id: 2,
-                    text: `You've had ${stats.distractions} distractions today. Try using focus mode to stay on track.`,
-                    type: 'warning',
-                });
-            } else if (stats.distractions === 0 && stats.focusTime > 0) {
-                newInsights.push({
-                    id: 2,
-                    text: 'Zero distractions detected! Your focus is on point today. 🎯',
-                    type: 'success',
-                });
-            }
-
-            if (stats.sessions === 0) {
-                newInsights.push({
-                    id: 3,
-                    text: 'No focus sessions completed yet. Start one to track your deep work!',
-                    type: 'tip',
-                });
+                }]);
             } else {
-                newInsights.push({
-                    id: 3,
-                    text: `You've completed ${stats.sessions} focus session${stats.sessions > 1 ? 's' : ''}. ${stats.sessions >= 4 ? 'Impressive!' : 'Keep going!'}`,
-                    type: 'success',
-                });
+                setInsights(uiInsights.slice(0, 4));
             }
-
-            if (stats.topApps.length > 0) {
-                const topApp = stats.topApps[0];
-                newInsights.push({
-                    id: 4,
-                    text: `Your most used app today is ${topApp.app} (${topApp.minutes}m). Is this aligned with your goals?`,
-                    type: 'tip',
-                });
-            }
-
-            setInsights(newInsights.slice(0, 3));
         } catch (error) {
             console.error('Failed to generate insights:', error);
             setInsights([{
-                id: 1,
+                id: 'error',
                 text: 'Start tracking to get personalized AI insights about your productivity!',
                 type: 'tip',
             }]);
@@ -97,19 +61,61 @@ export default function AIInsightsWidget() {
         }
     };
 
-    const getInsightIcon = (type: Insight['type']) => {
-        switch (type) {
-            case 'success': return <TrendingUp className="w-4 h-4 text-green-400" />;
-            case 'warning': return <AlertCircle className="w-4 h-4 text-yellow-400" />;
-            default: return <Lightbulb className="w-4 h-4 text-primary-400" />;
+    const askAI = async () => {
+        if (!prompt.trim()) return;
+
+        setAskingAI(true);
+        try {
+            const response = await enhancedAIInsightsService.queryNaturalLanguage(prompt);
+            setAiResponse(response.answer);
+        } catch (error) {
+            console.error('AI query failed:', error);
+            setAiResponse("I couldn't process that query. Try asking about your productivity, focus time, or task completion.");
+        } finally {
+            setAskingAI(false);
+            setPrompt('');
         }
     };
 
-    const getInsightBg = (type: Insight['type']) => {
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            askAI();
+        }
+    };
+
+    const getInsightIcon = (type: Insight['type']) => {
         switch (type) {
-            case 'success': return 'bg-green-500/10 border-green-500/20';
-            case 'warning': return 'bg-yellow-500/10 border-yellow-500/20';
-            default: return 'bg-primary-500/10 border-primary-500/20';
+            case 'success':
+            case 'opportunity':
+                return <TrendingUp className="w-4 h-4 text-green-400" />;
+            case 'warning':
+                return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+            case 'achievement':
+                return <Trophy className="w-4 h-4 text-yellow-400" />;
+            case 'coaching':
+                return <Heart className="w-4 h-4 text-pink-400" />;
+            default:
+                return <Lightbulb className="w-4 h-4 text-primary-400" />;
+        }
+    };
+
+    const getInsightBg = (type: Insight['type'], priority?: string) => {
+        if (priority === 'critical') {
+            return 'bg-red-500/10 border-red-500/30';
+        }
+        switch (type) {
+            case 'success':
+            case 'opportunity':
+                return 'bg-green-500/10 border-green-500/20';
+            case 'warning':
+                return 'bg-yellow-500/10 border-yellow-500/20';
+            case 'achievement':
+                return 'bg-yellow-500/10 border-yellow-500/30';
+            case 'coaching':
+                return 'bg-pink-500/10 border-pink-500/20';
+            default:
+                return 'bg-primary-500/10 border-primary-500/20';
         }
     };
 
@@ -119,6 +125,9 @@ export default function AIInsightsWidget() {
                 <span className="widget-card-title flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-primary-400" />
                     AI Insights
+                    <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-0.5 rounded-full">
+                        Enhanced
+                    </span>
                 </span>
                 <button
                     onClick={generateInsights}
@@ -129,21 +138,50 @@ export default function AIInsightsWidget() {
                 </button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-auto">
+            <div className="flex-1 space-y-2 overflow-auto">
                 {loading ? (
                     <div className="flex items-center justify-center py-8">
                         <Brain className="w-8 h-8 text-primary-400 animate-pulse" />
                     </div>
                 ) : (
-                    insights.map((insight) => (
-                        <div
-                            key={insight.id}
-                            className={`p-3 rounded-lg border ${getInsightBg(insight.type)} flex items-start gap-3`}
-                        >
-                            {getInsightIcon(insight.type)}
-                            <p className="text-sm text-dark-200 flex-1">{insight.text}</p>
-                        </div>
-                    ))
+                    <>
+                        {insights.map((insight) => (
+                            <div
+                                key={insight.id}
+                                className={`p-3 rounded-lg border ${getInsightBg(insight.type, insight.priority)} flex items-start gap-3`}
+                            >
+                                {getInsightIcon(insight.type)}
+                                <div className="flex-1">
+                                    <p className="text-sm text-dark-200">{insight.text}</p>
+                                    {insight.actions && insight.actions.length > 0 && (
+                                        <div className="flex gap-2 mt-2">
+                                            {insight.actions.slice(0, 2).map((action, i) => (
+                                                <button
+                                                    key={i}
+                                                    className="text-xs px-2 py-1 rounded bg-dark-700 hover:bg-dark-600 text-dark-200 transition-colors"
+                                                >
+                                                    {action.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {insight.priority === 'critical' && (
+                                    <Zap className="w-4 h-4 text-red-400" />
+                                )}
+                            </div>
+                        ))}
+
+                        {/* AI Response */}
+                        {aiResponse && (
+                            <div className="p-3 rounded-lg bg-primary-500/10 border border-primary-500/30">
+                                <div className="flex items-start gap-2">
+                                    <Brain className="w-4 h-4 text-primary-400 mt-0.5" />
+                                    <p className="text-sm text-dark-200">{aiResponse}</p>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -153,14 +191,29 @@ export default function AIInsightsWidget() {
                         type="text"
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="Ask AI about productivity..."
+                        onKeyPress={handleKeyPress}
+                        placeholder="Ask about productivity, focus time..."
                         className="input-field flex-1 text-sm"
+                        disabled={askingAI}
                     />
-                    <button className="btn-primary text-sm px-3" disabled>
-                        Ask
+                    <button
+                        className="btn-primary text-sm px-3 flex items-center gap-1"
+                        onClick={askAI}
+                        disabled={askingAI || !prompt.trim()}
+                    >
+                        {askingAI ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <>
+                                <Send className="w-4 h-4" />
+                                Ask
+                            </>
+                        )}
                     </button>
                 </div>
-                <p className="text-xs text-dark-500 mt-1">AI chat coming soon with Groq API</p>
+                <p className="text-xs text-dark-500 mt-1">
+                    Natural language queries powered by AI
+                </p>
             </div>
         </div>
     );

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX, Settings2, ChevronRight } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, Target, Volume2, VolumeX, Settings2, ChevronRight, Sparkles, TrendingUp, Activity } from 'lucide-react';
 import { audioService, SoundEffect } from '../services/audio-service';
 import { FocusPreset, DEFAULT_PRESETS } from '../services/pomodoro-service';
+import { enhancedPomodoroService } from '../services/enhanced-pomodoro-service';
+import { enhancedDeepWorkService, FlowState } from '../services/enhanced-deep-work-service';
 import CustomTimerModal from '../components/CustomTimerModal';
 
 interface TimerState {
@@ -33,10 +35,27 @@ export default function FocusPage() {
     const [sessionsToday, setSessionsToday] = useState(0);
     const [focusToday, setFocusToday] = useState(0);
     const [showCustomModal, setShowCustomModal] = useState(false);
+    const [flowState, setFlowState] = useState<FlowState | null>(null);
+    const [patternOptions, setPatternOptions] = useState<typeof DEFAULT_PRESETS>(DEFAULT_PRESETS);
+    const [breakSuggestion, setBreakSuggestion] = useState<string | null>(null);
 
     useEffect(() => {
         loadStats();
+        loadPatterns();
     }, []);
+
+    // Flow state monitoring
+    useEffect(() => {
+        if (timer.isRunning && timer.mode === 'focus') {
+            const interval = setInterval(() => {
+                const state = enhancedDeepWorkService.getFlowState();
+                setFlowState(state);
+            }, 5000);
+            return () => clearInterval(interval);
+        } else {
+            setFlowState(null);
+        }
+    }, [timer.isRunning, timer.mode]);
 
     const loadStats = async () => {
         if (!window.wakey) return;
@@ -47,6 +66,21 @@ export default function FocusPage() {
         } catch (error) {
             console.error('Failed to load stats:', error);
         }
+    };
+
+    const loadPatterns = () => {
+        // Combine default presets with enhanced patterns
+        const enhancedPatterns = enhancedPomodoroService.getBuiltInPatterns().map(p => ({
+            id: p.id,
+            name: p.name,
+            focusDuration: p.workDuration,
+            breakDuration: p.shortBreak,
+            cycles: p.sessionsBeforeLong,
+            icon: '⚡',
+            autoStart: p.autoStart,
+            breakInterval: 0,
+        }));
+        setPatternOptions([...DEFAULT_PRESETS, ...enhancedPatterns]);
     };
 
     const formatTime = (seconds: number) => {
@@ -65,6 +99,9 @@ export default function FocusPage() {
             Math.floor(timer.timeRemaining / 60)
         );
 
+        // Start flow state tracking
+        enhancedDeepWorkService.startSession('deep-work', selectedPreset.focusDuration * 60 * 1000);
+
         // Initialize break interval timer if configured
         const breakIntervalRemaining = selectedPreset.breakInterval > 0 && timer.mode === 'focus'
             ? selectedPreset.breakInterval * 60
@@ -77,13 +114,14 @@ export default function FocusPage() {
             distractionCount: 0,
             breakIntervalRemaining,
         }));
-    }, [timer.mode, timer.timeRemaining, selectedPreset.breakInterval]);
+    }, [timer.mode, timer.timeRemaining, selectedPreset.breakInterval, selectedPreset.focusDuration]);
 
     const pauseTimer = useCallback(() => {
         setTimer(prev => ({ ...prev, isRunning: false }));
     }, []);
 
     const resetTimer = useCallback(() => {
+        enhancedDeepWorkService.endSession(false);
         setTimer(prev => ({
             ...prev,
             isRunning: false,
@@ -93,6 +131,7 @@ export default function FocusPage() {
             currentCycle: 1,
             breakIntervalRemaining: null,
         }));
+        setFlowState(null);
     }, [selectedPreset]);
 
     const selectPreset = (preset: FocusPreset) => {
@@ -122,6 +161,12 @@ export default function FocusPage() {
             totalCycles: preset.cycles,
             breakIntervalRemaining: null,
         }));
+    };
+
+    const suggestBreak = async () => {
+        const suggestion = await enhancedPomodoroService.getAdaptiveBreakSuggestion();
+        setBreakSuggestion(`${suggestion.activity} (${suggestion.duration}min)`);
+        setTimeout(() => setBreakSuggestion(null), 5000);
     };
 
     // Timer countdown
@@ -163,6 +208,7 @@ export default function FocusPage() {
             if (window.wakey) {
                 window.wakey.endFocusSession(timer.sessionId, quality, timer.distractionCount);
             }
+            enhancedDeepWorkService.endSession(true);
 
             if (timer.mode === 'focus') {
                 // Focus cycle completed
@@ -238,6 +284,7 @@ export default function FocusPage() {
                     ...prev,
                     distractionCount: prev.distractionCount + 1,
                 }));
+                enhancedDeepWorkService.recordDistraction('Unknown');
             }
         });
 
@@ -251,29 +298,73 @@ export default function FocusPage() {
     const totalSeconds = (timer.mode === 'focus' ? selectedPreset.focusDuration : selectedPreset.breakDuration) * 60;
     const progress = ((totalSeconds - timer.timeRemaining) / totalSeconds) * 100;
 
+    // Flow state colors
+    const getFlowLevel = (state: FlowState | null) => {
+        if (!state) return 0;
+        if (state.flowScore >= 85) return 5;
+        if (state.flowScore >= 70) return 4;
+        if (state.flowScore >= 55) return 3;
+        if (state.flowScore >= 40) return 2;
+        return 1;
+    };
+
+    const getFlowColor = (state: FlowState | null) => {
+        const level = getFlowLevel(state);
+        if (level >= 4) return 'text-purple-400';
+        if (level >= 3) return 'text-green-400';
+        if (level >= 2) return 'text-blue-400';
+        return 'text-yellow-400';
+    };
+
+    const getFlowLabel = (state: FlowState | null) => {
+        if (!state) return '';
+        const labels = ['Warming Up', 'Getting Focused', 'In the Zone', 'Deep Flow', 'Peak Flow'];
+        return labels[Math.min(getFlowLevel(state), 4)];
+    };
+
     return (
         <div className="max-w-2xl mx-auto py-8">
             <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1 className="text-3xl font-bold text-white mb-2 flex items-center justify-center gap-2">
                     {timer.mode === 'focus' ? 'Focus Mode' : 'Break Time'}
+                    <span className="text-xs bg-primary-500/20 text-primary-400 px-2 py-1 rounded-full">
+                        Enhanced
+                    </span>
                 </h1>
                 <p className="text-dark-400">
                     {timer.mode === 'focus'
                         ? 'Stay focused and minimize distractions'
                         : 'Take a break, stretch, and recharge'}
                 </p>
+
+                {/* Flow State Indicator */}
+                        {flowState && timer.isRunning && timer.mode === 'focus' && (
+                            <div className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-dark-800 border border-dark-700 ${getFlowColor(flowState)}`}>
+                                <Activity className="w-4 h-4" />
+                                <span className="font-medium">{getFlowLabel(flowState)}</span>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map(i => (
+                                        <div
+                                            key={i}
+                                            className={`w-2 h-2 rounded-full transition-all ${i <= getFlowLevel(flowState) ? 'bg-current' : 'bg-dark-600'
+                                                }`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                 {timer.totalCycles > 1 && (
                     <div className="flex items-center justify-center gap-2 mt-3">
                         {Array.from({ length: timer.totalCycles }, (_, i) => (
                             <div
                                 key={i}
-                                className={`w-3 h-3 rounded-full transition-all ${
-                                    i < timer.currentCycle
-                                        ? 'bg-primary-500'
-                                        : i === timer.currentCycle - 1 && timer.mode === 'focus'
+                                className={`w-3 h-3 rounded-full transition-all ${i < timer.currentCycle
+                                    ? 'bg-primary-500'
+                                    : i === timer.currentCycle - 1 && timer.mode === 'focus'
                                         ? 'bg-primary-500 animate-pulse'
                                         : 'bg-dark-600'
-                                }`}
+                                    }`}
                             />
                         ))}
                         <span className="text-dark-400 text-sm ml-2">
@@ -294,7 +385,7 @@ export default function FocusPage() {
                         <circle
                             cx="144" cy="144" r="130"
                             fill="none"
-                            stroke={timer.mode === 'focus' ? '#14b8a6' : '#f59e0b'}
+                            stroke={flowState && getFlowLevel(flowState) >= 4 ? '#a855f7' : timer.mode === 'focus' ? '#14b8a6' : '#f59e0b'}
                             strokeWidth="12"
                             strokeDasharray={2 * Math.PI * 130}
                             strokeDashoffset={2 * Math.PI * 130 * (1 - progress / 100)}
@@ -347,11 +438,26 @@ export default function FocusPage() {
                 >
                     {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
                 </button>
+
+                <button
+                    onClick={suggestBreak}
+                    className="w-14 h-14 rounded-full bg-dark-700 text-dark-400 hover:bg-dark-600 flex items-center justify-center transition-all"
+                    title="Get break suggestion"
+                >
+                    <Sparkles className="w-6 h-6" />
+                </button>
             </div>
+
+            {/* Break Suggestion */}
+            {breakSuggestion && (
+                <div className="text-center mb-4 text-yellow-400 bg-yellow-500/10 py-2 px-4 rounded-lg text-sm">
+                    💡 Suggested: {breakSuggestion}
+                </div>
+            )}
 
             {/* Presets */}
             <div className="flex flex-wrap justify-center gap-3 mb-6">
-                {DEFAULT_PRESETS.map((preset) => (
+                {patternOptions.map((preset) => (
                     <button
                         key={preset.id}
                         onClick={() => selectPreset(preset)}
@@ -415,10 +521,13 @@ export default function FocusPage() {
                 </button>
             </div>
 
-            {/* Stats */}
+            {/* Stats with Flow Metrics */}
             <div className="bg-dark-800 rounded-xl p-6 border border-dark-700">
-                <h2 className="text-lg font-semibold text-white mb-4">Today's Progress</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary-400" />
+                    Today's Progress
+                </h2>
+                <div className="grid grid-cols-3 gap-4">
                     <div className="bg-dark-900 rounded-lg p-4 text-center">
                         <div className="text-3xl font-bold text-white">{sessionsToday}</div>
                         <div className="text-dark-400 text-sm">Sessions</div>
@@ -428,6 +537,12 @@ export default function FocusPage() {
                             {Math.floor(focusToday / 60)}h {focusToday % 60}m
                         </div>
                         <div className="text-dark-400 text-sm">Focus Time</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-4 text-center">
+                        <div className="text-3xl font-bold text-purple-400">
+                            {flowState ? `${Math.round(flowState.flowDuration)}m` : '0m'}
+                        </div>
+                        <div className="text-dark-400 text-sm">Flow Time</div>
                     </div>
                 </div>
             </div>
