@@ -44,7 +44,6 @@ export interface GitHubContributionDay {
 
 class GitHubIntegrationService {
     private config: GitHubConfig;
-    private readonly API_BASE = 'https://api.github.com';
 
     constructor() {
         this.config = this.loadConfig();
@@ -135,18 +134,14 @@ class GitHubIntegrationService {
             const since = new Date();
             since.setDate(since.getDate() - days);
 
-            const response = await fetch(
-                `${this.API_BASE}/users/${this.config.username}/events?per_page=100`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${this.config.accessToken}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                    },
-                }
+            // Use IPC bridge to bypass CORS
+            const response = await window.wakey.fetchGitHub(
+                `/users/${this.config.username}/events?per_page=100`,
+                this.config.accessToken!
             );
 
-            if (response.ok) {
-                const events = await response.json();
+            if (response.ok && response.data) {
+                const events = response.data;
                 const commits: GitHubCommit[] = [];
 
                 for (const event of events) {
@@ -175,25 +170,50 @@ class GitHubIntegrationService {
         return [];
     }
 
-    // Get contribution calendar (last year)
+    // Get contribution calendar (last year) using GraphQL API
     async getContributions(): Promise<GitHubContributionDay[]> {
         if (!this.isConnected()) return [];
 
-        // GitHub's contribution data requires GraphQL API
-        // For now, return demo data
-        const contributions: GitHubContributionDay[] = [];
-        const today = new Date();
+        try {
+            const query = `
+                query($username: String!) {
+                    user(login: $username) {
+                        contributionsCollection {
+                            contributionCalendar {
+                                weeks {
+                                    contributionDays {
+                                        date
+                                        contributionCount
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            `;
 
-        for (let i = 0; i < 365; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            contributions.push({
-                date: date.toISOString().split('T')[0],
-                count: Math.floor(Math.random() * 10),
-            });
+            const fullQuery = query.replace('$username', `"${this.config.username}"`);
+            const response = await window.wakey.fetchGitHubGraphQL(fullQuery, this.config.accessToken!);
+
+            if (response.ok && response.data?.data?.user?.contributionsCollection) {
+                const weeks = response.data.data.user.contributionsCollection.contributionCalendar.weeks;
+                const contributions: GitHubContributionDay[] = [];
+
+                for (const week of weeks) {
+                    for (const day of week.contributionDays) {
+                        contributions.push({
+                            date: day.date,
+                            count: day.contributionCount,
+                        });
+                    }
+                }
+                return contributions;
+            }
+        } catch (error) {
+            console.error('Failed to fetch GitHub contributions:', error);
         }
 
-        return contributions;
+        return [];
     }
 
     // Get today's commit count

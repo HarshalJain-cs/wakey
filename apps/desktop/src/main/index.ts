@@ -1586,6 +1586,30 @@ function setupIpcHandlers(): void {
         }
     });
 
+    // Linear GraphQL API proxy
+    ipcMain.handle('fetch-linear-graphql', async (_e, query: string, variables: Record<string, any>, accessToken: string) => {
+        try {
+            const response = await fetch('https://api.linear.app/graphql', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query, variables }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return { ok: true, status: response.status, data };
+            } else {
+                const errorText = await response.text();
+                return { ok: false, status: response.status, error: errorText };
+            }
+        } catch (error) {
+            return { ok: false, status: 0, error: (error as Error).message };
+        }
+    });
+
 }
 
 app.whenReady().then(() => {

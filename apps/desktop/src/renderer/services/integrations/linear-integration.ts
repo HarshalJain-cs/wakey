@@ -118,25 +118,18 @@ export class LinearIntegration extends BaseIntegration {
     }
 
     private async graphqlQuery<T>(query: string, variables?: Record<string, any>): Promise<T> {
-        const response = await fetch('https://api.linear.app/graphql', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query, variables })
-        });
+        // Use IPC bridge to bypass CORS in Electron
+        const response = await window.wakey.fetchLinearGraphQL(query, variables || {}, this.accessToken || '');
 
         if (!response.ok) {
             throw new Error(`Linear API error: ${response.status}`);
         }
 
-        const data = await response.json();
-        if (data.errors) {
-            throw new Error(`Linear GraphQL error: ${data.errors[0].message}`);
+        if (response.data?.errors) {
+            throw new Error(`Linear GraphQL error: ${response.data.errors[0].message}`);
         }
 
-        return data.data;
+        return response.data?.data;
     }
 
     private async fetchAssignedIssues(): Promise<LinearIssue[]> {

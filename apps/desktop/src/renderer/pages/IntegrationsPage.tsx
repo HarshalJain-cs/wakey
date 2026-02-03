@@ -1090,12 +1090,20 @@ export default function IntegrationsPage() {
                             <>
                                 <div className="flex items-center gap-3 p-3 bg-dark-700 rounded-lg">
                                     {github.avatarUrl && (
-                                        <img src={github.avatarUrl} alt="GitHub" className="w-8 h-8 rounded-full" />
+                                        <img src={github.avatarUrl} alt="GitHub" className="w-10 h-10 rounded-full ring-2 ring-primary-500/30" />
                                     )}
-                                    <div>
+                                    <div className="flex-1">
                                         <p className="text-white font-medium">{github.username}</p>
-                                        <p className="text-xs text-dark-400">Connected</p>
+                                        <p className="text-xs text-green-400 flex items-center gap-1">
+                                            <Check className="w-3 h-3" /> Connected
+                                        </p>
                                     </div>
+                                    {github.lastSync && (
+                                        <div className="text-right text-xs text-dark-400">
+                                            <p>Last synced</p>
+                                            <p className="text-dark-300">{new Date(github.lastSync).toLocaleString()}</p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between p-2 bg-dark-700 rounded-lg">

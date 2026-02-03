@@ -129,6 +129,10 @@ contextBridge.exposeInMainWorld('wakey', {
         ipcRenderer.invoke('fetch-github', endpoint, accessToken),
     fetchGitHubGraphQL: (query: string, accessToken: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> =>
         ipcRenderer.invoke('fetch-github-graphql', query, accessToken),
+
+    // Linear API (routes through main process to bypass CORS)
+    fetchLinearGraphQL: (query: string, variables: Record<string, any>, accessToken: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> =>
+        ipcRenderer.invoke('fetch-linear-graphql', query, variables, accessToken),
 });
 
 // Validate that the API is properly exposed
@@ -245,6 +249,7 @@ declare global {
             removeAllListeners: (channel: string) => void;
             fetchGitHub: (endpoint: string, accessToken: string) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
             fetchGitHubGraphQL: (query: string, accessToken: string) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
+            fetchLinearGraphQL: (query: string, variables: Record<string, any>, accessToken: string) => Promise<{ ok: boolean; status: number; data?: any; error?: string }>;
         };
     }
 }
