@@ -139,3 +139,65 @@
 .animate-scaleIn {
   animation: scaleIn 0.2s ease-out;
 }
+
+/* Toast slide-in animation */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/* Shimmer effect for legendary achievements */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+/* Confetti burst animation */
+@keyframes confetti {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-200px) rotate(720deg);
+  }
+}
+
+/* Level up glow animation */
+@keyframes levelGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(20, 184, 166, 0.6);
+  }
+}
+
+.animate-level-glow {
+  animation: levelGlow 1.5s ease-in-out infinite;
+}

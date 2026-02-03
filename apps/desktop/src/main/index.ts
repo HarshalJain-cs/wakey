@@ -993,12 +993,26 @@ function createWindow(): void {
     });
 
     mainWindow.webContents.on('console-message', (_event, _level, message) => {
-        console.log('Renderer console:', message);
+        try {
+            logger.debug('Renderer console:', message);
+        } catch (err) {
+            // Ignore broken pipe errors when stdout is not writable
+            const code = (err as NodeJS.ErrnoException | undefined)?.code;
+            if (code !== 'EPIPE') {
+                logger.error('Failed to write renderer console output', err);
+            }
+        }
     });
 
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-        mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    // In dev mode, always load from dev server
+    const devServerUrl = process.env['ELECTRON_RENDERER_URL'] || 'http://localhost:5173';
+    console.log('[Main] is.dev:', is.dev, 'ELECTRON_RENDERER_URL:', process.env['ELECTRON_RENDERER_URL']);
+
+    if (is.dev) {
+        console.log('[Main] Loading from dev server:', devServerUrl);
+        mainWindow.loadURL(devServerUrl);
     } else {
+        console.log('[Main] Loading from built files');
         mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
     }
 }
@@ -1549,7 +1563,6 @@ function setupIpcHandlers(): void {
 
     // GitHub GraphQL API for contribution data
     ipcMain.handle('fetch-github-graphql', async (_e, query: string, accessToken: string) => {
-        console.log('[GitHub GraphQL] Making request...');
         try {
             const response = await fetch('https://api.github.com/graphql', {
                 method: 'POST',
@@ -1561,18 +1574,14 @@ function setupIpcHandlers(): void {
                 body: JSON.stringify({ query }),
             });
 
-            console.log('[GitHub GraphQL] Response status:', response.status);
             if (response.ok) {
                 const data = await response.json();
-                console.log('[GitHub GraphQL] Got data, totalContributions:', data?.data?.user?.contributionsCollection?.contributionCalendar?.totalContributions);
                 return { ok: true, status: response.status, data };
             } else {
                 const errorText = await response.text();
-                console.error('[GitHub GraphQL] Error:', errorText);
                 return { ok: false, status: response.status, error: errorText };
             }
         } catch (error) {
-            console.error('GitHub GraphQL error:', error);
             return { ok: false, status: 0, error: (error as Error).message };
         }
     });

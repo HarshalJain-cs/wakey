@@ -6,8 +6,10 @@ import Sidebar from './components/Sidebar';
 import ProductivityCoach from './components/ProductivityCoach';
 import ShortcutManager from './components/ShortcutManager';
 import OnboardingWizard from './components/OnboardingWizard';
+import FeatureTour from './components/FeatureTour';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
 import SupportModal from './components/SupportModal';
+import { ToastProvider } from './components/AchievementToast';
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const FocusPage = lazy(() => import('./pages/FocusPage'));
@@ -39,6 +41,7 @@ export default function App() {
     const [isTracking, setIsTracking] = useState(false);
     const [darkMode, setDarkMode] = useState(true);
     const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showFeatureTour, setShowFeatureTour] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authLoading, setAuthLoading] = useState(true);
     const [requireAuth, setRequireAuth] = useState(true);
@@ -254,50 +257,69 @@ export default function App() {
     }
 
     return (
-        <div className={`h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
-            <TitleBar darkMode={darkMode} />
-            <div className="flex flex-1 overflow-hidden">
-                <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} onSupportClick={() => setShowSupportModal(true)} />
-                <main className="flex-1 overflow-auto bg-dark-900 p-6">
-                    <Suspense fallback={
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                                <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        <ToastProvider>
+            <div className={`h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
+                <TitleBar darkMode={darkMode} />
+                <div className="flex flex-1 overflow-hidden">
+                    <Sidebar isTracking={isTracking} onTrackingToggle={toggleTracking} onSupportClick={() => setShowSupportModal(true)} />
+                    <main className="flex-1 overflow-auto bg-dark-900 p-6">
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                                    <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+                                </div>
                             </div>
-                        </div>
-                    }>
-                        <Routes>
-                            <Route path="/" element={<Dashboard isTracking={isTracking} />} />
-                            <Route path="/focus" element={<FocusPage />} />
-                            <Route path="/tasks" element={<TasksPage />} />
-                            <Route path="/projects" element={<ProjectsPage />} />
-                            <Route path="/analytics" element={<AnalyticsPage />} />
-                            <Route path="/research" element={<ResearchPage />} />
-                            <Route path="/integrations" element={<IntegrationsPage />} />
-                            <Route path="/trader" element={<TraderDashboard />} />
-                            <Route path="/developer" element={<DeveloperDashboard />} />
-                            <Route path="/ai-consensus" element={<AIConsensusPage />} />
-                            <Route path="/knowledge" element={<KnowledgePage />} />
-                            <Route path="/agents" element={<AgentsPage />} />
-                            <Route path="/flashcards" element={<FlashcardsPage />} />
-                            <Route path="/cloud-sync" element={<CloudSyncPage />} />
-                            <Route path="/achievements" element={<AchievementsPage />} />
-                            <Route path="/health" element={<HealthPage />} />
-                            <Route path="/goals" element={<GoalsPage />} />
-                            <Route path="/music" element={<MusicPage />} />
-                            <Route path="/shortcuts" element={<ShortcutsPage />} />
-                            <Route path="/workflows" element={<WorkflowsPage />} />
-                            <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
-                        </Routes>
-                    </Suspense>
-                </main>
+                        }>
+                            <Routes>
+                                <Route path="/" element={<Dashboard isTracking={isTracking} />} />
+                                <Route path="/focus" element={<FocusPage />} />
+                                <Route path="/tasks" element={<TasksPage />} />
+                                <Route path="/projects" element={<ProjectsPage />} />
+                                <Route path="/analytics" element={<AnalyticsPage />} />
+                                <Route path="/research" element={<ResearchPage />} />
+                                <Route path="/integrations" element={<IntegrationsPage />} />
+                                <Route path="/trader" element={<TraderDashboard />} />
+                                <Route path="/developer" element={<DeveloperDashboard />} />
+                                <Route path="/ai-consensus" element={<AIConsensusPage />} />
+                                <Route path="/knowledge" element={<KnowledgePage />} />
+                                <Route path="/agents" element={<AgentsPage />} />
+                                <Route path="/flashcards" element={<FlashcardsPage />} />
+                                <Route path="/cloud-sync" element={<CloudSyncPage />} />
+                                <Route path="/achievements" element={<AchievementsPage />} />
+                                <Route path="/health" element={<HealthPage />} />
+                                <Route path="/goals" element={<GoalsPage />} />
+                                <Route path="/music" element={<MusicPage />} />
+                                <Route path="/shortcuts" element={<ShortcutsPage />} />
+                                <Route path="/workflows" element={<WorkflowsPage />} />
+                                <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
+                            </Routes>
+                        </Suspense>
+                    </main>
+                </div>
+                {showOnboarding && <OnboardingWizard
+                    onComplete={() => {
+                        setShowOnboarding(false);
+                        // Show feature tour after onboarding
+                        setShowFeatureTour(true);
+                    }}
+                    onSkip={async () => {
+                        await window.wakey?.setSetting('onboardingComplete', true);
+                        setShowOnboarding(false);
+                    }}
+                />}
+                {showFeatureTour && <FeatureTour
+                    onComplete={async () => {
+                        await window.wakey?.setSetting('featureTourComplete', true);
+                        setShowFeatureTour(false);
+                    }}
+                    onSkip={() => setShowFeatureTour(false)}
+                />}
+                <ProductivityCoach />
+                <ShortcutManager />
+                <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
+                <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
             </div>
-            {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} onSkip={async () => { await window.wakey?.setSetting('onboardingComplete', true); setShowOnboarding(false); }} />}
-            <ProductivityCoach />
-            <ShortcutManager />
-            <CommandPalette isOpen={commandPalette.isOpen} onClose={commandPalette.close} darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
-            <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
-        </div>
+        </ToastProvider>
     );
 }

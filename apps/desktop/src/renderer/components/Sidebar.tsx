@@ -137,6 +137,7 @@ export default function Sidebar({ isTracking, onTrackingToggle, onSupportClick }
                     <NavLink
                         key={path}
                         to={path}
+                        data-tour={path === '/settings' ? 'settings' : undefined}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
                                 ? 'bg-primary-500/10 text-primary-400 border-l-2 border-primary-500'

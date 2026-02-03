@@ -36,6 +36,16 @@ interface CollaborativeSession {
     status: 'waiting' | 'active' | 'break' | 'completed';
 }
 
+interface SessionStats {
+    todayMinutes: number;
+    todaySessions: number;
+    averageMinutes: number;
+    completedSessions: number;
+    totalSessions: number;
+    breaksTaken: number;
+    productivityScore: number;
+}
+
 const BUILT_IN_PATTERNS: FocusPattern[] = [
     { id: 'classic', name: 'Classic Pomodoro', workDuration: 25, shortBreak: 5, longBreak: 15, sessionsBeforeLong: 4, autoStart: false, soundTheme: 'default' },
     { id: 'ultradian', name: 'Ultradian Rhythm', workDuration: 90, shortBreak: 20, longBreak: 30, sessionsBeforeLong: 2, autoStart: true, soundTheme: 'nature' },
@@ -76,6 +86,7 @@ export class EnhancedPomodoroService {
     private fatigueLevel: number = 0;
     private sessionQuality: number = 100;
     private todaySessions: number = 0;
+    private breaksTaken: number = 0;
     private customPatterns: FocusPattern[] = [];
 
     getBuiltInPatterns(): FocusPattern[] {
@@ -137,6 +148,21 @@ export class EnhancedPomodoroService {
         return this.todaySessions;
     }
 
+    async getSessionStats(): Promise<SessionStats> {
+        const sessionCount = await this.getTodaySessionCount();
+        const todayMinutes = sessionCount * this.currentPattern.workDuration;
+
+        return {
+            todayMinutes,
+            todaySessions: sessionCount,
+            averageMinutes: 120, // Would calculate from historical data
+            completedSessions: Math.max(0, sessionCount),
+            totalSessions: sessionCount,
+            breaksTaken: this.breaksTaken,
+            productivityScore: Math.min(100, 60 + sessionCount * 5)
+        };
+    }
+
     startSession(template?: SessionTemplate): string {
         const sessionId = generateId();
         const pattern = template?.pattern || this.currentPattern;
@@ -160,6 +186,10 @@ export class EnhancedPomodoroService {
             actualDuration: this.currentPattern.workDuration,
             quality
         });
+    }
+
+    recordBreak(): void {
+        this.breaksTaken++;
     }
 
     async exportSessions(
@@ -204,4 +234,4 @@ export class EnhancedPomodoroService {
 }
 
 export const enhancedPomodoroService = new EnhancedPomodoroService();
-export type { FocusPattern, SessionTemplate, BreakSuggestion, CollaborativeSession };
+export type { FocusPattern, SessionTemplate, BreakSuggestion, CollaborativeSession, SessionStats };

@@ -191,7 +191,6 @@ export default function DeveloperDashboard() {
                 throw new Error('GitHub GraphQL bridge not available (preload not loaded)');
             }
             const graphqlResponse = await window.wakey.fetchGitHubGraphQL(graphqlQuery, config.accessToken);
-            console.log('GitHub GraphQL Response:', JSON.stringify(graphqlResponse, null, 2));
 
             let contributionData: ContributionDay[][] = [];
             let totalContributions = 0;

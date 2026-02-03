@@ -8,6 +8,13 @@ import TaskListWidget from '../components/widgets/TaskListWidget';
 import AIInsightsWidget from '../components/widgets/AIInsightsWidget';
 import GoalsWidget from '../components/widgets/GoalsWidget';
 import AdvancedAnalyticsWidget from '../components/widgets/AdvancedAnalyticsWidget';
+import WeeklyTrendsWidget from '../components/widgets/WeeklyTrendsWidget';
+import DailyChallengesWidget from '../components/widgets/DailyChallengesWidget';
+import BurnoutRiskWidget from '../components/widgets/BurnoutRiskWidget';
+import EyeStrainTimer from '../components/widgets/EyeStrainTimer';
+import LeaderboardWidget from '../components/widgets/LeaderboardWidget';
+import QuickStatsBar from '../components/QuickStatsBar';
+import FirstTimeUserTips from '../components/FirstTimeUserTips';
 
 interface DashboardProps {
     isTracking: boolean;
@@ -25,17 +32,27 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
     { id: 'stats', name: 'Today Stats', visible: true, order: 0, colSpan: 1 },
     { id: 'timer', name: 'Focus Timer', visible: true, order: 1, colSpan: 1 },
     { id: 'quality', name: 'Focus Quality', visible: true, order: 2, colSpan: 1 },
-    { id: 'goals', name: 'Goals', visible: true, order: 3, colSpan: 1 },
-    { id: 'tasks', name: 'Task List', visible: true, order: 4, colSpan: 1 },
-    { id: 'ai', name: 'AI Insights', visible: true, order: 5, colSpan: 1 },
-    { id: 'analytics', name: 'Advanced Analytics', visible: true, order: 6, colSpan: 1 },
-    { id: 'calendar', name: 'Calendar', visible: true, order: 7, colSpan: 2 },
+    { id: 'challenges', name: 'Daily Challenges', visible: true, order: 3, colSpan: 1 },
+    { id: 'trends', name: 'Weekly Trends', visible: true, order: 4, colSpan: 1 },
+    { id: 'leaderboard', name: 'Leaderboard', visible: true, order: 5, colSpan: 1 },
+    { id: 'burnout', name: 'Wellness Check', visible: true, order: 6, colSpan: 1 },
+    { id: 'eyestrain', name: 'Eye Strain Timer', visible: true, order: 7, colSpan: 1 },
+    { id: 'goals', name: 'Goals', visible: true, order: 8, colSpan: 1 },
+    { id: 'tasks', name: 'Task List', visible: true, order: 9, colSpan: 1 },
+    { id: 'ai', name: 'AI Insights', visible: true, order: 10, colSpan: 1 },
+    { id: 'analytics', name: 'Advanced Analytics', visible: true, order: 11, colSpan: 1 },
+    { id: 'calendar', name: 'Calendar', visible: true, order: 12, colSpan: 2 },
 ];
 
 const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
     stats: TodayStatsWidget,
     timer: FocusTimerWidget,
     quality: FocusQualityWidget,
+    challenges: DailyChallengesWidget,
+    trends: WeeklyTrendsWidget,
+    leaderboard: LeaderboardWidget,
+    burnout: BurnoutRiskWidget,
+    eyestrain: EyeStrainTimer,
     goals: GoalsWidget,
     tasks: TaskListWidget,
     ai: AIInsightsWidget,
@@ -48,6 +65,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
     const [editMode, setEditMode] = useState(false);
     const [draggedWidget, setDraggedWidget] = useState<string | null>(null);
     const [dragOverWidget, setDragOverWidget] = useState<string | null>(null);
+    const [showTips, setShowTips] = useState(true); // Default to true to show tips
 
     // Browser extension connection status - use timestamp to be tolerant of brief disconnections
     const [lastActivityTime, setLastActivityTime] = useState<number>(0);
@@ -67,6 +85,37 @@ export default function Dashboard({ isTracking }: DashboardProps) {
         const interval = setInterval(() => setTick(t => t + 1), 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Check if tips should be shown (for new users)
+    useEffect(() => {
+        const checkTipsVisibility = async () => {
+            if (!window.wakey) {
+                // Show tips by default if wakey API not available
+                setShowTips(true);
+                return;
+            }
+            try {
+                const settings = await window.wakey.getSettings();
+                // Show tips unless explicitly dismissed
+                const tipsHidden = settings.tipsDismissed === true;
+                setShowTips(!tipsHidden);
+            } catch (error) {
+                console.error('Failed to check tips visibility:', error);
+                // Show tips by default on error
+                setShowTips(true);
+            }
+        };
+        checkTipsVisibility();
+    }, []);
+
+    const handleDismissTips = async () => {
+        setShowTips(false);
+        try {
+            await window.wakey?.setSetting('tipsDismissed', true);
+        } catch (error) {
+            console.error('Failed to save tips dismissal:', error);
+        }
+    };
 
     // Listen for browser activity events from extension
     useEffect(() => {
@@ -114,7 +163,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
     }, []);
 
 
-    // Load saved layout
+    // Load saved layout - merge with defaults to ensure new widgets are added
     useEffect(() => {
         const loadLayout = async () => {
 
@@ -122,7 +171,18 @@ export default function Dashboard({ isTracking }: DashboardProps) {
             try {
                 const settings = await window.wakey.getSettings();
                 if (settings.dashboardLayout) {
-                    setWidgets(settings.dashboardLayout as WidgetConfig[]);
+                    const savedWidgets = settings.dashboardLayout as WidgetConfig[];
+                    // Merge saved layout with defaults to add any new widgets
+                    const mergedWidgets = DEFAULT_WIDGETS.map(defaultWidget => {
+                        const savedWidget = savedWidgets.find(w => w.id === defaultWidget.id);
+                        if (savedWidget) {
+                            // Keep saved order but ensure visibility is preserved
+                            return { ...savedWidget, visible: savedWidget.visible ?? true };
+                        }
+                        // New widget not in saved layout - add it as visible
+                        return { ...defaultWidget, visible: true };
+                    });
+                    setWidgets(mergedWidgets);
                 }
             } catch (error) {
                 console.error('Failed to load dashboard layout:', error);
@@ -214,7 +274,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
         .sort((a, b) => a.order - b.order);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="dashboard">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
@@ -270,6 +330,13 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                 </div>
             </div>
 
+            {/* Quick Stats Bar */}
+            <div data-tour="quick-stats">
+                <QuickStatsBar />
+            </div>
+
+            {/* First Time User Tips */}
+            {showTips && <FirstTimeUserTips onDismiss={handleDismissTips} />}
 
             {/* Edit Mode Panel */}
             {editMode && (
@@ -315,6 +382,9 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                     return (
                         <div
                             key={widget.id}
+                            data-tour={widget.id === 'timer' ? 'focus-timer' :
+                                widget.id === 'challenges' ? 'challenges' :
+                                    widget.id === 'ai' ? 'ai-insights' : undefined}
                             className={`relative ${widget.colSpan === 2 ? 'col-span-2' : ''} ${dragOverWidget === widget.id ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-dark-900' : ''
                                 } ${draggedWidget === widget.id ? 'opacity-50' : ''}`}
                             draggable={editMode}
