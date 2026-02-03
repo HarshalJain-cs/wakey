@@ -2,7 +2,7 @@
 
 import keytar from 'keytar';
 import crypto from 'crypto';
-import { safeStorage } from 'electron';
+import { safeStorage } from './electron-shim';
 
 const SERVICE_NAME = 'Wakey';
 

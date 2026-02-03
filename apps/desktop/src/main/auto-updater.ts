@@ -2,7 +2,7 @@
 // Handles checking for updates, downloading, and installing
 
 import { autoUpdater, UpdateInfo } from 'electron-updater';
-import { BrowserWindow, ipcMain, dialog } from 'electron';
+import { BrowserWindow, ipcMain, dialog } from './electron-shim';
 
 // ==========================================
 // Configuration

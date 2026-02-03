@@ -22,6 +22,13 @@ const ensurePreloadCJS = () => ({
 export default defineConfig({
     main: {
         plugins: [externalizeDepsPlugin()],
+        build: {
+            rollupOptions: {
+                output: {
+                    interop: 'compat',
+                },
+            },
+        },
     },
     preload: {
         plugins: [externalizeDepsPlugin({ exclude: ['electron'] }), ensurePreloadCJS()],

@@ -13,7 +13,7 @@
  * @module main/jarvis-api
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { ipcMain, BrowserWindow } from './electron-shim';
 import { logger } from './logger';
 import { isValidVoiceCommand, parseVoiceCommand, sanitizeCommand } from './voice-validator';
 

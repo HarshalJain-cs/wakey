@@ -16,9 +16,8 @@
  * @see {@link https://www.electronjs.org/docs/latest/tutorial/process-model Electron Process Model}
  */
 
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from './electron-shim';
 import { join } from 'path';
-import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { IncomingMessage } from 'http';
 import Store from 'electron-store';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -1006,9 +1005,10 @@ function createWindow(): void {
 
     // In dev mode, always load from dev server
     const devServerUrl = process.env['ELECTRON_RENDERER_URL'] || 'http://localhost:5173';
-    console.log('[Main] is.dev:', is.dev, 'ELECTRON_RENDERER_URL:', process.env['ELECTRON_RENDERER_URL']);
+    const isDev = !app.isPackaged;
+    console.log('[Main] isDev:', isDev, 'ELECTRON_RENDERER_URL:', process.env['ELECTRON_RENDERER_URL']);
 
-    if (is.dev) {
+    if (isDev) {
         console.log('[Main] Loading from dev server:', devServerUrl);
         mainWindow.loadURL(devServerUrl);
     } else {
@@ -1613,8 +1613,8 @@ function setupIpcHandlers(): void {
 }
 
 app.whenReady().then(() => {
-    electronApp.setAppUserModelId('com.wakey.app');
-    app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window));
+    app.setAppUserModelId('com.wakey.app');
+    // Removed optimizer.watchWindowShortcuts - @electron-toolkit/utils removed due to env issues
 
     createWindow();
 

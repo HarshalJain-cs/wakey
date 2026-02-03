@@ -8,7 +8,7 @@
  * @module main/logger
  */
 
-import { is } from '@electron-toolkit/utils';
+import { app } from './electron-shim';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -19,9 +19,19 @@ const LOG_LEVELS: Record<LogLevel, number> = {
     error: 3,
 };
 
+// Lazy check for dev mode - app.isPackaged may not be available at module load
+function isDev(): boolean {
+    try {
+        return !app.isPackaged;
+    } catch {
+        // If app isn't ready, assume dev mode
+        return process.env.NODE_ENV !== 'production';
+    }
+}
+
 // In production, only show warnings and errors
-// In development, show all logs
-const currentLevel: LogLevel = is.dev ? 'debug' : 'warn';
+// In development, show all logs  
+const getCurrentLevel = (): LogLevel => isDev() ? 'debug' : 'warn';
 
 function safeWrite(stream: NodeJS.WriteStream, message: string): void {
     try {
@@ -48,19 +58,19 @@ function formatMessage(level: LogLevel, args: unknown[]): string {
  */
 export const logger = {
     debug: (...args: unknown[]): void => {
-        if (LOG_LEVELS.debug >= LOG_LEVELS[currentLevel]) {
+        if (LOG_LEVELS.debug >= LOG_LEVELS[getCurrentLevel()]) {
             safeWrite(process.stdout, formatMessage('debug', args));
         }
     },
 
     info: (...args: unknown[]): void => {
-        if (LOG_LEVELS.info >= LOG_LEVELS[currentLevel]) {
+        if (LOG_LEVELS.info >= LOG_LEVELS[getCurrentLevel()]) {
             safeWrite(process.stdout, formatMessage('info', args));
         }
     },
 
     warn: (...args: unknown[]): void => {
-        if (LOG_LEVELS.warn >= LOG_LEVELS[currentLevel]) {
+        if (LOG_LEVELS.warn >= LOG_LEVELS[getCurrentLevel()]) {
             safeWrite(process.stderr, formatMessage('warn', args));
         }
     },
@@ -69,8 +79,9 @@ export const logger = {
         safeWrite(process.stderr, formatMessage('error', args));
     },
 
-    getLevel: (): LogLevel => currentLevel,
-    isDev: (): boolean => is.dev,
+    getLevel: (): LogLevel => getCurrentLevel(),
+    isDev: (): boolean => isDev(),
 };
 
 export default logger;
+
