@@ -323,20 +323,58 @@ export class EnhancedAchievementsService {
         return Math.min(totalProgress, 100);
     }
 
-    private async getFocusHours(_period?: string): Promise<number> {
-        return 0; // Would query database
+    private async getFocusHours(period?: string): Promise<number> {
+        try {
+            if (period === 'day') {
+                const todayStats = await window.wakey.getTodayStats();
+                return todayStats.focusTime / 60; // Convert minutes to hours
+            } else if (period === 'week') {
+                // Use week comparison data
+                const weekData = await window.wakey.getWeekComparison();
+                return weekData.thisWeek.focusMinutes / 60;
+            } else {
+                // Lifetime
+                const allTimeStats = await window.wakey.getAllTimeStats();
+                return allTimeStats.totalFocusMinutes / 60;
+            }
+        } catch (error) {
+            console.error('Failed to get focus hours:', error);
+            return 0;
+        }
     }
 
     private async getCurrentStreak(): Promise<number> {
-        return 0; // Would query database
+        try {
+            // Calculate streak from activities - count consecutive days with focus activity
+            const allTimeStats = await window.wakey.getAllTimeStats();
+            // Simple streak approximation: days with any focus activity
+            // For a more accurate implementation, we'd need a dedicated streak handler
+            return Math.min(allTimeStats.totalDays, 30); // Cap at 30 for now
+        } catch (error) {
+            console.error('Failed to get streak:', error);
+            return 0;
+        }
     }
 
     private async getCompletedTasks(): Promise<number> {
-        return 0; // Would query database
+        try {
+            // Use completed sessions as proxy for completed work units
+            const allTimeStats = await window.wakey.getAllTimeStats();
+            return allTimeStats.completedSessions || 0;
+        } catch (error) {
+            console.error('Failed to get completed tasks:', error);
+            return 0;
+        }
     }
 
     private async getDeepWorkSessions(): Promise<number> {
-        return 0; // Would query database
+        try {
+            const allTimeStats = await window.wakey.getAllTimeStats();
+            return allTimeStats.completedSessions || 0;
+        } catch (error) {
+            console.error('Failed to get deep work sessions:', error);
+            return 0;
+        }
     }
 
     private getSecretAchievementName(id: string): string {
