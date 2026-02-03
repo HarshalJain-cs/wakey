@@ -131,36 +131,98 @@ export class EnhancedPomodoroService {
 
     async calculateFatigueLevel(): Promise<number> {
         // Calculate based on:
-        // - Hours worked today
+        // - Hours worked today (from real activity data)
         // - Session quality trends
         // - Time since last break
         // - Distraction frequency
+        // - Time of day (circadian rhythm)
 
-        const hoursWorked = this.todaySessions * (this.currentPattern.workDuration / 60);
-        const baseFatigue = Math.min(hoursWorked * 10, 50); // Max 50 from hours alone
-        const qualityPenalty = (100 - this.sessionQuality) * 0.3;
+        try {
+            const todayStats = await window.wakey.getTodayStats();
+            const hoursWorked = todayStats.focusTime / 60; // Convert minutes to hours
+            const distractionCount = todayStats.distractions;
+            const currentHour = new Date().getHours();
 
-        this.fatigueLevel = Math.min(100, baseFatigue + qualityPenalty);
-        return this.fatigueLevel;
+            // Base fatigue from hours worked (0-40 points)
+            const hoursFatigue = Math.min(hoursWorked * 5, 40);
+
+            // Distraction penalty (0-20 points)
+            const distractionPenalty = Math.min(distractionCount * 2, 20);
+
+            // Session quality penalty (0-20 points)
+            const qualityPenalty = (100 - this.sessionQuality) * 0.2;
+
+            // Circadian rhythm factor (0-20 points)
+            // Higher fatigue during post-lunch dip (14:00-16:00) and evening
+            let circadianFatigue = 0;
+            if (currentHour >= 14 && currentHour <= 16) {
+                circadianFatigue = 15; // Post-lunch dip
+            } else if (currentHour >= 21 || currentHour <= 6) {
+                circadianFatigue = 20; // Late night / early morning
+            } else if (currentHour >= 17 && currentHour <= 20) {
+                circadianFatigue = 10; // Evening
+            }
+
+            this.fatigueLevel = Math.min(100, hoursFatigue + distractionPenalty + qualityPenalty + circadianFatigue);
+            return this.fatigueLevel;
+        } catch (error) {
+            console.error('Failed to calculate fatigue from real data:', error);
+            // Fallback to simple calculation
+            const hoursWorked = this.todaySessions * (this.currentPattern.workDuration / 60);
+            const baseFatigue = Math.min(hoursWorked * 10, 50);
+            const qualityPenalty = (100 - this.sessionQuality) * 0.3;
+            this.fatigueLevel = Math.min(100, baseFatigue + qualityPenalty);
+            return this.fatigueLevel;
+        }
     }
 
     async getTodaySessionCount(): Promise<number> {
-        return this.todaySessions;
+        try {
+            const stats = await window.wakey.getTodayStats();
+            return stats.sessions;
+        } catch {
+            return this.todaySessions;
+        }
     }
 
     async getSessionStats(): Promise<SessionStats> {
-        const sessionCount = await this.getTodaySessionCount();
-        const todayMinutes = sessionCount * this.currentPattern.workDuration;
+        try {
+            const todayStats = await window.wakey.getTodayStats();
+            const allTimeStats = await window.wakey.getAllTimeStats();
+            const fatigue = await this.calculateFatigueLevel();
 
-        return {
-            todayMinutes,
-            todaySessions: sessionCount,
-            averageMinutes: 120, // Would calculate from historical data
-            completedSessions: Math.max(0, sessionCount),
-            totalSessions: sessionCount,
-            breaksTaken: this.breaksTaken,
-            productivityScore: Math.min(100, 60 + sessionCount * 5)
-        };
+            // Calculate productivity score based on focus ratio and fatigue
+            const focusRatio = todayStats.focusTime > 0
+                ? todayStats.focusTime / (todayStats.focusTime + (todayStats.distractions * 5))
+                : 0;
+            const productivityScore = Math.round(focusRatio * 100 * (1 - fatigue / 200));
+
+            return {
+                todayMinutes: todayStats.focusTime,
+                todaySessions: todayStats.sessions,
+                averageMinutes: allTimeStats.totalDays > 0
+                    ? Math.round(allTimeStats.totalFocusMinutes / allTimeStats.totalDays)
+                    : 0,
+                completedSessions: allTimeStats.completedSessions,
+                totalSessions: allTimeStats.completedSessions,
+                breaksTaken: this.breaksTaken,
+                productivityScore: Math.max(0, Math.min(100, productivityScore))
+            };
+        } catch (error) {
+            console.error('Failed to get session stats from real data:', error);
+            // Fallback to mock data
+            const sessionCount = this.todaySessions;
+            const todayMinutes = sessionCount * this.currentPattern.workDuration;
+            return {
+                todayMinutes,
+                todaySessions: sessionCount,
+                averageMinutes: 120,
+                completedSessions: sessionCount,
+                totalSessions: sessionCount,
+                breaksTaken: this.breaksTaken,
+                productivityScore: Math.min(100, 60 + sessionCount * 5)
+            };
+        }
     }
 
     startSession(template?: SessionTemplate): string {

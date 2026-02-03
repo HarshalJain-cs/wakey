@@ -138,19 +138,44 @@ export class EnhancedDeepWorkService {
     }
 
     async getCurrentMetrics(): Promise<CurrentMetrics> {
-        // Would integrate with activity tracking
-        return {
-            continuousFocusMinutes: 0,
-            distractionsPerHour: 0,
-            contextSwitchesPerHour: 0,
-            recentDistractions: 0,
-            recentContextSwitches: 0
-        };
+        try {
+            const todayStats = await window.wakey.getTodayStats();
+            const currentHour = new Date().getHours();
+
+            // Calculate hourly rates
+            const hoursElapsedToday = Math.max(1, currentHour - 8); // Assume work starts at 8am
+            const distractionsPerHour = todayStats.distractions / hoursElapsedToday;
+            const contextSwitchesPerHour = todayStats.contextSwitches ? todayStats.contextSwitches / hoursElapsedToday : 0;
+
+            return {
+                continuousFocusMinutes: todayStats.currentSessionMinutes || 0,
+                distractionsPerHour: Math.round(distractionsPerHour * 10) / 10,
+                contextSwitchesPerHour: Math.round(contextSwitchesPerHour * 10) / 10,
+                recentDistractions: todayStats.distractions,
+                recentContextSwitches: todayStats.contextSwitches || 0
+            };
+        } catch (error) {
+            console.error('Failed to get current metrics:', error);
+            return {
+                continuousFocusMinutes: 0,
+                distractionsPerHour: 0,
+                contextSwitchesPerHour: 0,
+                recentDistractions: 0,
+                recentContextSwitches: 0
+            };
+        }
     }
 
     async getActiveAppProductivityScore(): Promise<number> {
-        // Would check currently active app against productivity scores
-        return 50; // Neutral default
+        try {
+            const currentActivity = await window.wakey.getCurrentActivity();
+            if (currentActivity?.app) {
+                return this.getAppCategoryBaseScore(currentActivity.app);
+            }
+            return 50; // Neutral default
+        } catch {
+            return 50; // Neutral default
+        }
     }
 
     async getAppProductivityScores(): Promise<Map<string, number>> {
@@ -213,15 +238,43 @@ export class EnhancedDeepWorkService {
     async getDeepWorkMetrics(): Promise<DeepWorkMetrics> {
         const appScores = await this.getAppProductivityScores();
 
-        return {
-            dailyDeepWorkMinutes: 0,
-            deepWorkPercentage: 0,
-            averageFlowDuration: 0,
-            distractionFrequency: 0,
-            contextSwitchFrequency: 0,
-            peakFlowHours: [],
-            appProductivityScores: appScores
-        };
+        try {
+            const todayStats = await window.wakey.getTodayStats();
+            const allTimeStats = await window.wakey.getAllTimeStats();
+            const currentHour = new Date().getHours();
+            const hoursElapsedToday = Math.max(1, currentHour - 8);
+
+            // Calculate deep work minutes (focus time with high productivity threshold)
+            const dailyDeepWorkMinutes = Math.round(todayStats.focusTime * 0.7); // Assume 70% of focus is deep work
+            const totalActiveMinutes = todayStats.focusTime + (todayStats.distractions * 5); // Penalty for distractions
+            const deepWorkPercentage = totalActiveMinutes > 0
+                ? Math.round((dailyDeepWorkMinutes / totalActiveMinutes) * 100)
+                : 0;
+
+            // Peak flow hours - analyze when most productive (mock for now, would need historical data)
+            const peakFlowHours = [10, 11, 14, 15]; // Common productive hours
+
+            return {
+                dailyDeepWorkMinutes,
+                deepWorkPercentage,
+                averageFlowDuration: allTimeStats.averageSessionMinutes || 25,
+                distractionFrequency: Math.round((todayStats.distractions / hoursElapsedToday) * 10) / 10,
+                contextSwitchFrequency: Math.round(((todayStats.contextSwitches || 0) / hoursElapsedToday) * 10) / 10,
+                peakFlowHours,
+                appProductivityScores: appScores
+            };
+        } catch (error) {
+            console.error('Failed to get deep work metrics:', error);
+            return {
+                dailyDeepWorkMinutes: 0,
+                deepWorkPercentage: 0,
+                averageFlowDuration: 0,
+                distractionFrequency: 0,
+                contextSwitchFrequency: 0,
+                peakFlowHours: [],
+                appProductivityScores: appScores
+            };
+        }
     }
 
     private async enableDistractionFreeMode(): Promise<void> {
