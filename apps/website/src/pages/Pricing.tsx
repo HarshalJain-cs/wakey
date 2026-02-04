@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Minus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { useSound } from '@/components/effects/SoundEffects';
@@ -46,6 +46,15 @@ const Pricing = () => {
   const [isYearly, setIsYearly] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { playClick, playToggle } = useSound();
+  const navigate = useNavigate();
+
+  const handleGetStarted = (plan: typeof plans[0]) => {
+    playClick();
+    const url = plan.planId
+      ? `/checkout?plan=${plan.planId}&billing=${isYearly ? 'yearly' : 'weekly'}`
+      : '/coming-soon';
+    navigate(url);
+  };
 
   return (
     <div className="grain">
@@ -71,22 +80,20 @@ const Pricing = () => {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {plans.map((plan) => {
-                const checkoutUrl = plan.planId
-                  ? `/checkout?plan=${plan.planId}&billing=${isYearly ? 'yearly' : 'weekly'}`
-                  : '/coming-soon';
-                return (
+              {plans.map((plan) => (
                   <div key={plan.name} className={`premium-card ${plan.popular ? 'border-primary/50' : ''}`}>
                     {plan.popular && <div className="text-xs text-primary mb-4">Most Popular</div>}
                     <h3 className="text-xl font-serif">{plan.name}</h3>
                     <div className="my-4"><span className="text-4xl font-serif">{plan.currency}{isYearly ? plan.priceYearly : plan.priceWeekly}</span><span className="text-muted-foreground">{isYearly ? '/yr' : '/wk'}</span></div>
                     <ul className="space-y-3 mb-6">{plan.features.map(f => <li key={f} className="flex items-center gap-2 text-sm"><Check className="w-4 h-4 text-primary" />{f}</li>)}</ul>
-                    <Link to={checkoutUrl} className={`block w-full text-center py-2.5 rounded-lg font-medium ${plan.popular ? 'btn-primary' : 'btn-secondary'}`} onClick={playClick}>
+                    <button
+                      onClick={() => handleGetStarted(plan)}
+                      className={`block w-full text-center py-2.5 rounded-lg font-medium cursor-pointer ${plan.popular ? 'btn-primary' : 'btn-secondary'}`}
+                    >
                       {plan.planId ? 'Get Started' : 'Sign Up Free'}
-                    </Link>
+                    </button>
                   </div>
-                );
-              })}
+              ))}
             </div>
           </ScrollSection>
 

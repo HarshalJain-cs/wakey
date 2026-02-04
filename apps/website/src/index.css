@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts loaded in index.html for better performance */
 
 @tailwind base;
 @tailwind components;
@@ -123,13 +123,19 @@
 @layer base {
   * {
     @apply border-border;
-    transition-property: background-color, border-color, color;
-    transition-duration: 200ms;
-    transition-timing-function: ease-out;
   }
 
   html {
     scroll-behavior: smooth;
+  }
+
+  /* Only apply transitions to interactive elements for better performance */
+  a, button, input, select, textarea,
+  .btn-primary, .btn-secondary, .btn-gold,
+  .premium-card, .premium-card-hover {
+    transition-property: background-color, border-color, color, box-shadow, transform;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
   }
 
   body {
@@ -250,7 +256,7 @@
     transform: scaleX(1);
   }
 
-  /* Subtle grain texture */
+  /* Subtle grain texture - lowered z-index for better click handling */
   .grain::before {
     content: '';
     position: fixed;
@@ -261,7 +267,7 @@
     pointer-events: none;
     opacity: 0.015;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    z-index: 1000;
+    z-index: 1;
   }
 }
 

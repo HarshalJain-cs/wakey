@@ -21,4 +21,25 @@ export default defineConfig(({ mode }) => ({
     // by forcing Vite to use a single copy of React.
     dedupe: ["react", "react-dom"],
   },
+  build: {
+    // Enable code splitting
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunk for React ecosystem
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // UI library chunk
+          'vendor-ui': ['framer-motion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tooltip'],
+          // Charting library (heavy)
+          'vendor-charts': ['recharts'],
+        },
+      },
+    },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 500,
+    // Enable minification
+    minify: 'esbuild',
+    // Generate source maps only in dev
+    sourcemap: mode === 'development',
+  },
 }));

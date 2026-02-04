@@ -34,49 +34,35 @@ interface ScrollSectionProps {
 const ScrollSection = ({
   children,
   className = '',
-  parallax = true,
+  parallax = false, // Disabled by default for performance
   fadeIn = true,
-  fadeOut = true,
-  parallaxDistance = 100,
+  fadeOut = false, // Disabled by default for performance
+  parallaxDistance = 50, // Reduced distance
   fadeInDelay = 0,
   id,
 }: ScrollSectionProps) => {
   const sectionRef = useRef<HTMLElement>(null);
-  
+
+  // Only track scroll if parallax or fadeOut is enabled
+  const shouldTrackScroll = parallax || fadeOut;
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
-    offset: ['start end', 'end start'], // Track from when section enters to when it leaves
+    offset: ['start end', 'end start'],
   });
 
-  // Parallax effect - content moves down as you scroll through
+  // Simplified parallax - only if enabled
   const y = useTransform(
-    scrollYProgress, 
-    [0, 0.5, 1], 
-    parallax ? [-parallaxDistance * 0.3, 0, parallaxDistance] : [0, 0, 0]
-  );
-  
-  // Opacity: fade in from 0 to 1 as it enters (0-0.3), stay at 1 (0.3-0.7), fade out to 0 as it leaves (0.7-1)
-  const opacity = useTransform(
-    scrollYProgress, 
-    [0, 0.2, 0.8, 1], 
-    [
-      fadeIn ? 0 : 1, 
-      1, 
-      1, 
-      fadeOut ? 0 : 1
-    ]
+    scrollYProgress,
+    [0, 1],
+    parallax ? [0, parallaxDistance * 0.5] : [0, 0]
   );
 
-  // Scale effect - subtle zoom
-  const scale = useTransform(
+  // Simplified opacity - only fade out if enabled
+  const opacity = useTransform(
     scrollYProgress,
-    [0, 0.2, 0.8, 1],
-    [
-      fadeIn ? 0.95 : 1,
-      1,
-      1,
-      fadeOut ? 0.98 : 1
-    ]
+    [0, 0.2, 0.9, 1],
+    [fadeIn ? 0.3 : 1, 1, 1, fadeOut ? 0.3 : 1]
   );
 
   return (
@@ -84,18 +70,14 @@ const ScrollSection = ({
       ref={sectionRef}
       id={id}
       className={className}
-      style={{
-        y,
-        opacity,
-        scale,
-      }}
-      initial={fadeIn ? { opacity: 0, y: 30 } : undefined}
+      style={shouldTrackScroll ? { y, opacity } : undefined}
+      initial={fadeIn ? { opacity: 0, y: 20 } : undefined}
       whileInView={fadeIn ? { opacity: 1, y: 0 } : undefined}
-      viewport={{ once: false, margin: '-10%' }}
-      transition={{ 
-        duration: 0.8, 
+      viewport={{ once: true, margin: '-5%' }} // once: true prevents re-triggering
+      transition={{
+        duration: 0.4,
         delay: fadeInDelay,
-        ease: [0.16, 1, 0.3, 1] 
+        ease: 'easeOut'
       }}
     >
       {children}
