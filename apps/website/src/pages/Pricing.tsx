@@ -74,7 +74,7 @@ const Pricing = () => {
               {plans.map((plan) => {
                 const checkoutUrl = plan.planId
                   ? `/checkout?plan=${plan.planId}&billing=${isYearly ? 'yearly' : 'weekly'}`
-                  : '/signup';
+                  : '/coming-soon';
                 return (
                   <div key={plan.name} className={`premium-card ${plan.popular ? 'border-primary/50' : ''}`}>
                     {plan.popular && <div className="text-xs text-primary mb-4">Most Popular</div>}

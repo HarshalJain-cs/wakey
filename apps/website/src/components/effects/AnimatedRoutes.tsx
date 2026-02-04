@@ -33,6 +33,7 @@ import Press from '@/pages/Press';
 import AuthCallback from '@/pages/AuthCallback';
 import Download from '@/pages/Download';
 import Checkout from '@/pages/Checkout';
+import ComingSoon from '@/pages/ComingSoon';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -149,6 +150,14 @@ const AnimatedRoutes = () => {
           element={
             <PageTransition>
               <Download />
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/coming-soon"
+          element={
+            <PageTransition>
+              <ComingSoon />
             </PageTransition>
           }
         />
