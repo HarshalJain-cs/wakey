@@ -99,8 +99,7 @@ export default function RazorpayCheckout({
         }
         // In production (not localhost), use the production API URL
         if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
-          // Use your Railway backend URL here
-          return 'https://wakeyfinalnew-production.up.railway.app';
+          return 'https://wakeywebsite-production.up.railway.app';
         }
         // Fallback to localhost for development
         return 'http://localhost:3001';
