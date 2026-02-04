@@ -8,6 +8,7 @@ import { SoundProvider } from "@/components/effects/SoundEffects";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AnimatedRoutes from "@/components/effects/AnimatedRoutes";
 import CookieConsent from "@/components/effects/CookieConsent";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
               <AnimatedRoutes />
               <CookieConsent />
             </BrowserRouter>
+            <SpeedInsights />
           </AuthProvider>
         </SoundProvider>
       </TooltipProvider>
