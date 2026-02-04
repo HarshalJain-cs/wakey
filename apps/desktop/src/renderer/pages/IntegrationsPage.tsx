@@ -1608,6 +1608,34 @@ export default function IntegrationsPage() {
                         </div>
                         <button className="w-full btn-secondary text-sm">Connect</button>
                     </div>
+
+                    {/* Make.com */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600">
+                                <span className="text-xl">🔮</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">Make.com</h3>
+                                <p className="text-xs text-dark-400">Visual workflows</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
+
+                    {/* IFTTT */}
+                    <div className="bg-dark-800 rounded-xl border border-dark-700 p-4 hover:border-dark-600 transition-colors">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600">
+                                <span className="text-xl">🔗</span>
+                            </div>
+                            <div>
+                                <h3 className="font-medium text-white">IFTTT</h3>
+                                <p className="text-xs text-dark-400">Simple automations</p>
+                            </div>
+                        </div>
+                        <button className="w-full btn-secondary text-sm">Connect</button>
+                    </div>
                 </div>
             </div>
 

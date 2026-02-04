@@ -13,6 +13,16 @@ import DailyChallengesWidget from '../components/widgets/DailyChallengesWidget';
 import BurnoutRiskWidget from '../components/widgets/BurnoutRiskWidget';
 import EyeStrainTimer from '../components/widgets/EyeStrainTimer';
 import LeaderboardWidget from '../components/widgets/LeaderboardWidget';
+import PerformanceMonitorWidget from '../components/widgets/PerformanceMonitorWidget';
+import AmbientSoundsWidget from '../components/widgets/AmbientSoundsWidget';
+import TaskTreeWidget from '../components/widgets/TaskTreeWidget';
+import WearablesHealthWidget from '../components/widgets/WearablesHealthWidget';
+import UserLevelWidget from '../components/widgets/UserLevelWidget';
+import RecurringTasksWidget from '../components/widgets/RecurringTasksWidget';
+import QuickActionsWidget from '../components/widgets/QuickActionsWidget';
+import VoiceCommandWidget from '../components/widgets/VoiceCommandWidget';
+import AIReportWidget from '../components/widgets/AIReportWidget';
+import SleepInsightsWidget from '../components/widgets/SleepInsightsWidget';
 import QuickStatsBar from '../components/QuickStatsBar';
 import FirstTimeUserTips from '../components/FirstTimeUserTips';
 
@@ -29,19 +39,44 @@ interface WidgetConfig {
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-    { id: 'stats', name: 'Today Stats', visible: true, order: 0, colSpan: 1 },
-    { id: 'timer', name: 'Focus Timer', visible: true, order: 1, colSpan: 1 },
+    // Row 1: Core Focus (3 widgets)
+    { id: 'timer', name: 'Focus Timer', visible: true, order: 0, colSpan: 1 },
+    { id: 'stats', name: 'Today Stats', visible: true, order: 1, colSpan: 1 },
     { id: 'quality', name: 'Focus Quality', visible: true, order: 2, colSpan: 1 },
-    { id: 'challenges', name: 'Daily Challenges', visible: true, order: 3, colSpan: 1 },
-    { id: 'trends', name: 'Weekly Trends', visible: true, order: 4, colSpan: 1 },
-    { id: 'leaderboard', name: 'Leaderboard', visible: true, order: 5, colSpan: 1 },
-    { id: 'burnout', name: 'Wellness Check', visible: true, order: 6, colSpan: 1 },
-    { id: 'eyestrain', name: 'Eye Strain Timer', visible: true, order: 7, colSpan: 1 },
-    { id: 'goals', name: 'Goals', visible: true, order: 8, colSpan: 1 },
-    { id: 'tasks', name: 'Task List', visible: true, order: 9, colSpan: 1 },
-    { id: 'ai', name: 'AI Insights', visible: true, order: 10, colSpan: 1 },
-    { id: 'analytics', name: 'Advanced Analytics', visible: true, order: 11, colSpan: 1 },
-    { id: 'calendar', name: 'Calendar', visible: true, order: 12, colSpan: 2 },
+
+    // Row 2: Trends + Analytics
+    { id: 'trends', name: 'Weekly Trends', visible: true, order: 3, colSpan: 1 },
+    { id: 'analytics', name: 'Advanced Analytics', visible: true, order: 4, colSpan: 2 },
+
+    // Row 3: Tasks (3 widgets)
+    { id: 'tasks', name: 'Task List', visible: true, order: 5, colSpan: 1 },
+    { id: 'tasktree', name: 'Task Tree', visible: true, order: 6, colSpan: 1 },
+    { id: 'goals', name: 'Goals', visible: true, order: 7, colSpan: 1 },
+
+    // Row 4: Health + Wellness
+    { id: 'wearables', name: 'Health & Wearables', visible: true, order: 8, colSpan: 1 },
+    { id: 'eyestrain', name: 'Eye Strain Timer', visible: true, order: 9, colSpan: 1 },
+    { id: 'burnout', name: 'Wellness Check', visible: true, order: 10, colSpan: 1 },
+
+    // Row 5: Ambient + Challenges + Leaderboard
+    { id: 'ambient', name: 'Ambient Sounds', visible: true, order: 11, colSpan: 1 },
+    { id: 'challenges', name: 'Daily Challenges', visible: true, order: 12, colSpan: 1 },
+    { id: 'leaderboard', name: 'Leaderboard', visible: true, order: 13, colSpan: 1 },
+
+    // Row 6: AI Insights + Calendar
+    { id: 'ai', name: 'AI Insights', visible: true, order: 14, colSpan: 1 },
+    { id: 'calendar', name: 'Calendar', visible: true, order: 15, colSpan: 2 },
+
+    // Row 7: Performance & Level (moved to end)
+    { id: 'performance', name: 'Performance', visible: true, order: 16, colSpan: 1 },
+    { id: 'userlevel', name: 'Level & XP', visible: true, order: 17, colSpan: 1 },
+    { id: 'recurring', name: 'Recurring Tasks', visible: true, order: 18, colSpan: 1 },
+
+    // Row 8: New Phase W-AF Widgets
+    { id: 'quickactions', name: 'Quick Actions', visible: true, order: 19, colSpan: 1 },
+    { id: 'voice', name: 'Voice Commands', visible: true, order: 20, colSpan: 1 },
+    { id: 'aireport', name: 'AI Weekly Report', visible: true, order: 21, colSpan: 1 },
+    { id: 'sleepinsights', name: 'Sleep Insights', visible: true, order: 22, colSpan: 1 },
 ];
 
 const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
@@ -57,7 +92,17 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType> = {
     tasks: TaskListWidget,
     ai: AIInsightsWidget,
     analytics: AdvancedAnalyticsWidget,
+    performance: PerformanceMonitorWidget,
+    ambient: AmbientSoundsWidget,
+    tasktree: TaskTreeWidget,
+    wearables: WearablesHealthWidget,
+    userlevel: UserLevelWidget,
     calendar: CalendarWidget,
+    recurring: RecurringTasksWidget,
+    quickactions: QuickActionsWidget,
+    voice: VoiceCommandWidget,
+    aireport: AIReportWidget,
+    sleepinsights: SleepInsightsWidget,
 };
 
 export default function Dashboard({ isTracking }: DashboardProps) {
@@ -373,8 +418,8 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                 </div>
             )}
 
-            {/* Widget Grid - 3 columns */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Widget Grid - Mixed 3-Column Layout */}
+            <div className="grid grid-cols-3 gap-5">
                 {visibleWidgets.map(widget => {
                     const WidgetComponent = WIDGET_COMPONENTS[widget.id];
                     if (!WidgetComponent) return null;
@@ -385,7 +430,7 @@ export default function Dashboard({ isTracking }: DashboardProps) {
                             data-tour={widget.id === 'timer' ? 'focus-timer' :
                                 widget.id === 'challenges' ? 'challenges' :
                                     widget.id === 'ai' ? 'ai-insights' : undefined}
-                            className={`relative ${widget.colSpan === 2 ? 'col-span-2' : ''} ${dragOverWidget === widget.id ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-dark-900' : ''
+                            className={`relative ${widget.colSpan === 3 ? 'col-span-3' : widget.colSpan === 2 ? 'col-span-2' : ''} ${dragOverWidget === widget.id ? 'ring-2 ring-primary-500 ring-offset-2 ring-offset-dark-900' : ''
                                 } ${draggedWidget === widget.id ? 'opacity-50' : ''}`}
                             draggable={editMode}
                             onDragStart={(e) => handleDragStart(e, widget.id)}

@@ -9,6 +9,9 @@ import OnboardingWizard from './components/OnboardingWizard';
 import FeatureTour from './components/FeatureTour';
 import CommandPalette, { useCommandPalette } from './components/CommandPalette';
 import SupportModal from './components/SupportModal';
+import UpdateNotificationBanner from './components/UpdateNotificationBanner';
+import SyncStatusIndicator from './components/SyncStatusIndicator';
+import FlowStateIndicator from './components/FlowStateIndicator';
 import { ToastProvider } from './components/AchievementToast';
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -33,6 +36,9 @@ const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const MusicPage = lazy(() => import('./pages/MusicPage'));
 const ShortcutsPage = lazy(() => import('./pages/ShortcutsPage'));
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
+const APIDocsPage = lazy(() => import('./pages/APIDocsPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
 // EyeBreakReminder is now handled by ProductivityCoach/WorkBreakReminder
 import * as supabaseAuth from './services/supabase-auth';
 import { focusTrendsService } from './services/focus-trends-service';
@@ -258,6 +264,9 @@ export default function App() {
 
     return (
         <ToastProvider>
+            <UpdateNotificationBanner />
+            <SyncStatusIndicator position="bottom-right" />
+            <FlowStateIndicator isTracking={isTracking} />
             <div className={`h-screen flex flex-col ${darkMode ? 'dark' : ''}`}>
                 <TitleBar darkMode={darkMode} />
                 <div className="flex flex-1 overflow-hidden">
@@ -292,6 +301,9 @@ export default function App() {
                                 <Route path="/music" element={<MusicPage />} />
                                 <Route path="/shortcuts" element={<ShortcutsPage />} />
                                 <Route path="/workflows" element={<WorkflowsPage />} />
+                                <Route path="/team" element={<TeamPage />} />
+                                <Route path="/api-docs" element={<APIDocsPage />} />
+                                <Route path="/about" element={<AboutPage />} />
                                 <Route path="/settings" element={<SettingsPage darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />} />
                             </Routes>
                         </Suspense>

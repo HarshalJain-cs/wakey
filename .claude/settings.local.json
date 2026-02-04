@@ -62,7 +62,9 @@
       "WebFetch(domain:github.com)",
       "Bash(pnpm run lint)",
       "Bash(pnpm run build:*)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "Bash(wmic:*)",
+      "Bash(Get-PSDrive -PSProvider FileSystem)"
     ]
   },
   "enableAllProjectMcpServers": true,

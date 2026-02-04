@@ -16,6 +16,44 @@
  * @see {@link https://www.electronjs.org/docs/latest/tutorial/process-model Electron Process Model}
  */
 
+// ============================================
+// Global Error Handlers (MUST be first!)
+// ============================================
+// Handle EPIPE errors that occur when stdout/stderr is closed
+// This prevents crashes when the console is disconnected
+
+process.stdout?.on?.('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+        // Silently ignore - stdout was closed
+        return;
+    }
+});
+
+process.stderr?.on?.('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+        // Silently ignore - stderr was closed
+        return;
+    }
+});
+
+// Global uncaught exception handler for EPIPE
+process.on('uncaughtException', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE' || err.code === 'ERR_STREAM_DESTROYED') {
+        // Silently ignore EPIPE errors - they occur when stdout/stderr is closed
+        return;
+    }
+    // For other errors, log to file (since console might be broken)
+    const fs = require('fs');
+    const path = require('path');
+    try {
+        const logPath = path.join(process.env.APPDATA || '', 'wakey', 'crash.log');
+        const errMsg = `[${new Date().toISOString()}] Uncaught Exception: ${err.stack || err.message}\n`;
+        fs.appendFileSync(logPath, errMsg);
+    } catch {
+        // Can't even write to file - just exit gracefully
+    }
+});
+
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } from './electron-shim';
 import { join } from 'path';
 import { IncomingMessage } from 'http';
@@ -440,11 +478,17 @@ function startBrowserTrackingServer(retryCount = 0): void {
             // Log connection attempt (development only)
             logger.debug('WebSocket connection attempt', { hasToken: !!token });
 
-            // Validate token
-            if (!validateWebSocketToken(token)) {
+            // In development mode, allow connections without token for easier testing
+            // In production, token is required
+            const isDev = process.env.NODE_ENV !== 'production';
+            if (!isDev && !validateWebSocketToken(token)) {
                 logger.warn('WebSocket connection rejected: invalid token');
                 ws.close(4001, 'Unauthorized: Invalid or missing token');
                 return;
+            }
+
+            if (isDev && !token) {
+                logger.info('WebSocket connection accepted in development mode (no token)');
             }
 
             logger.info('Browser extension connected via WebSocket');

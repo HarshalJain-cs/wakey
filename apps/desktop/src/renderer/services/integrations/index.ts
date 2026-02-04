@@ -22,11 +22,17 @@ export { googleCalendarIntegration, GoogleCalendarIntegration } from './google-c
 // Communication integrations
 export { slackIntegration, SlackIntegration } from './slack-integration';
 export { microsoftTeamsIntegration, MicrosoftTeamsIntegration } from './microsoft-teams-integration';
+export { discordIntegration, DiscordIntegration } from './discord-integration';
 
 // Development integrations
 export { githubIntegration, GitHubIntegration } from './github-integration';
 export { linearIntegration, LinearIntegration } from './linear-integration';
 export { jiraIntegration, JiraIntegration } from './jira-integration';
+
+// Automation integrations
+export { zapierIntegration, ZapierIntegration } from './zapier-integration';
+export { makeIntegration, MakeIntegration } from './make-integration';
+export { iftttIntegration, IFTTTIntegration } from './ifttt-integration';
 
 // Integration registry
 import { BaseIntegration } from './base-integration';
@@ -36,9 +42,13 @@ import { asanaIntegration } from './asana-integration';
 import { googleCalendarIntegration } from './google-calendar-integration';
 import { slackIntegration } from './slack-integration';
 import { microsoftTeamsIntegration } from './microsoft-teams-integration';
+import { discordIntegration } from './discord-integration';
 import { githubIntegration } from './github-integration';
 import { linearIntegration } from './linear-integration';
 import { jiraIntegration } from './jira-integration';
+import { zapierIntegration } from './zapier-integration';
+import { makeIntegration } from './make-integration';
+import { iftttIntegration } from './ifttt-integration';
 
 // All available integrations
 export const integrations: BaseIntegration[] = [
@@ -48,9 +58,13 @@ export const integrations: BaseIntegration[] = [
     googleCalendarIntegration,
     slackIntegration,
     microsoftTeamsIntegration,
+    discordIntegration,
     githubIntegration,
     linearIntegration,
-    jiraIntegration
+    jiraIntegration,
+    zapierIntegration,
+    makeIntegration,
+    iftttIntegration
 ];
 
 // Integration manager service
