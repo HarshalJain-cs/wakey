@@ -1,9 +1,19 @@
-# Railway configuration - force npm instead of pnpm
+# Force Node.js with npm - disable all auto-detection
 [phases.setup]
-nixPkgs = ["nodejs_18", "npm"]
+nixPkgs = ["nodejs_20"]
+aptPkgs = []
 
 [phases.install]
+dependsOn = ["setup"]
 cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+dependsOn = ["install"]
+cmds = []
 
 [start]
 cmd = "npm run server"
+
+# Disable providers that might auto-detect
+[providers]
+node = true
