@@ -91,8 +91,25 @@ export default function RazorpayCheckout({
         throw new Error('Failed to load payment gateway');
       }
 
+      // Determine API URL - use env var, or fallback to production URL
+      const getApiUrl = () => {
+        // Check for environment variable first
+        if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
+          return import.meta.env.VITE_API_URL;
+        }
+        // In production (not localhost), use the production API URL
+        if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+          // Use your Railway backend URL here
+          return 'https://wakeyfinalnew-production.up.railway.app';
+        }
+        // Fallback to localhost for development
+        return 'http://localhost:3001';
+      };
+
+      const apiUrl = getApiUrl();
+      console.log('Using API URL:', apiUrl);
+
       // Create order via our backend
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const orderResponse = await fetch(`${apiUrl}/api/create-razorpay-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +121,9 @@ export default function RazorpayCheckout({
       });
 
       if (!orderResponse.ok) {
-        throw new Error('Failed to create order');
+        const errorText = await orderResponse.text();
+        console.error('Order creation failed:', orderResponse.status, errorText);
+        throw new Error(`Failed to create order: ${orderResponse.status}`);
       }
 
       const orderData = await orderResponse.json();
