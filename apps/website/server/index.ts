@@ -10,10 +10,11 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0'; // Required for Railway/Docker
 
-// CORS configuration
+// CORS configuration - allow all origins for now
 app.use(cors({
-  origin: process.env.VITE_SITE_URL || 'http://localhost:8080',
+  origin: true, // Allow all origins
   credentials: true,
 }));
 
@@ -28,6 +29,11 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ message: 'Wakey API Server', status: 'running' });
+});
+
 // Mount routes
 app.use('/api', checkoutRouter);
 app.use('/api', webhooksRouter);
@@ -36,16 +42,16 @@ app.use('/api', premiumRouter);
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Server error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 API server running on http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/api/health`);
+// Start server - bind to 0.0.0.0 for external access
+app.listen(Number(PORT), HOST, () => {
+  console.log(`🚀 API server running on http://${HOST}:${PORT}`);
+  console.log(`   Health check: http://${HOST}:${PORT}/api/health`);
 });
 
 export default app;
