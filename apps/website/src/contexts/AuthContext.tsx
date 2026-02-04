@@ -105,19 +105,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (currentSession?.user) {
           setSession(currentSession);
           setUser(currentSession.user);
-          await Promise.all([
+          // Set loading false immediately after we know user is authenticated
+          // Profile and subscription load in background
+          setIsLoading(false);
+          // Fetch profile and subscription in background (don't block)
+          Promise.all([
             fetchProfile(currentSession.user.id),
             fetchSubscription(currentSession.user.id),
-          ]);
+          ]).catch(err => console.error('Background fetch error:', err));
+        } else {
+          setIsLoading(false);
         }
       } catch (error) {
         console.error('Auth init error:', error);
-      } finally {
         setIsLoading(false);
       }
     };
 
-    initAuth();
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+
+    initAuth().finally(() => clearTimeout(timeoutId));
 
     // Listen for auth changes
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(

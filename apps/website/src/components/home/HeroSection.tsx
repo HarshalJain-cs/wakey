@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform, useMotionValue, useInView, animate } from 'framer-motion';
 import { ArrowRight, ChevronDown, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSound } from '@/components/effects/SoundEffects';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRef, useEffect, useState } from 'react';
@@ -100,6 +100,7 @@ const StatsSection = () => {
 const HeroSection = () => {
   const { playClick } = useSound();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { scrollYProgress } = useScroll({
@@ -239,22 +240,18 @@ const HeroSection = () => {
               className="mt-12 flex flex-col sm:flex-row gap-4 justify-center"
             >
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link
-                  to={user ? "/dashboard" : "/signup"}
-                  className="btn-primary inline-flex items-center justify-center group text-base relative overflow-hidden"
-                  onClick={playClick}
+                <button
+                  onClick={() => {
+                    playClick();
+                    navigate(user ? "/dashboard" : "/signup");
+                  }}
+                  className="btn-primary inline-flex items-center justify-center group text-base relative overflow-hidden cursor-pointer"
                 >
                   <span className="relative z-10 flex items-center">
                     {user ? "Go to Dashboard" : "Unlock Your Productivity"}
                     <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </span>
-                  <motion.span
-                    className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary"
-                    initial={{ x: '100%' }}
-                    whileHover={{ x: 0 }}
-                    transition={{ duration: 0.3 }}
-                  />
-                </Link>
+                </button>
               </motion.div>
               <motion.button
                 onClick={scrollToFeatures}
