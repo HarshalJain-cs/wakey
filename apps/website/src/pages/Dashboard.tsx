@@ -83,7 +83,7 @@ const Dashboard = () => {
                   all your productivity data in one beautiful, actionable interface.
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <Link to="/pricing" className="btn-primary inline-flex items-center group">
+                  <Link to="/checkout?plan=pro&billing=yearly" className="btn-primary inline-flex items-center group">
                     Get Started
                     <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>

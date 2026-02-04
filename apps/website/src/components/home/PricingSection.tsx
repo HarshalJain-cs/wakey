@@ -53,17 +53,27 @@ const PricingSection = () => {
   const handlePlanClick = (plan: Plan) => {
     playClick();
 
-    if (plan.name === 'Team') {
-      navigate('/contact');
+    if (plan.name === 'Free') {
+      // Free plan goes to coming-soon page
+      navigate('/coming-soon');
       return;
     }
 
-    if (plan.name === 'Free') {
+    if (plan.name === 'Team') {
+      if (isPremium) {
+        // Already premium, go to dashboard
+        navigate('/dashboard');
+        return;
+      }
+
+      const billingPeriod = isYearly ? 'yearly' : 'weekly';
+
       if (user) {
-        navigate('/download');
+        // Go directly to checkout
+        navigate(`/checkout?plan=team&billing=${billingPeriod}`);
       } else {
         // Store redirect destination and go to signup
-        localStorage.setItem('auth_redirect', '/download');
+        localStorage.setItem('auth_redirect', `/checkout?plan=team&billing=${billingPeriod}`);
         navigate('/signup');
       }
       return;
@@ -270,11 +280,10 @@ const PricingSection = () => {
                       <button
                         onClick={() => handlePlanClick(plan)}
                         disabled={plan.name === 'Pro' && isPremium}
-                        className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium transition-all group ${
-                          plan.popular
+                        className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium transition-all group ${plan.popular
                             ? 'bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50'
                             : 'border border-border/50 hover:border-border hover:bg-muted/50 text-foreground'
-                        }`}
+                          }`}
                       >
                         {getButtonText(plan)}
                         {!(plan.name === 'Pro' && isPremium) && (
