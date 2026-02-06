@@ -64,7 +64,8 @@
       "Bash(pnpm run build:*)",
       "Bash(pnpm test:*)",
       "Bash(wmic:*)",
-      "Bash(Get-PSDrive -PSProvider FileSystem)"
+      "Bash(Get-PSDrive -PSProvider FileSystem)",
+      "Bash(pnpm list:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
