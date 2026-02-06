@@ -98,8 +98,8 @@ export abstract class BaseIntegration {
         // In Electron, this would open auth window
         console.log(`Opening OAuth flow for ${this.name}: ${authUrl}`);
 
-        // Would normally wait for redirect callback
-        const authCode = await this.waitForAuthCallback();
+        // Open OAuth window and wait for auth code
+        const authCode = await this.waitForAuthCallback(authUrl, config.redirectUri);
 
         // Exchange code for tokens
         const tokens = await this.exchangeCodeForTokens(authCode, config);
@@ -217,9 +217,13 @@ export abstract class BaseIntegration {
         return Math.random().toString(36).substring(2, 15);
     }
 
-    protected async waitForAuthCallback(): Promise<string> {
-        // Would be implemented via Electron deep linking
-        return 'mock_auth_code';
+    protected async waitForAuthCallback(authUrl: string, redirectUri: string): Promise<string> {
+        // Use Electron OAuth window via IPC
+        if (typeof window !== 'undefined' && (window as any).wakey?.performOAuth) {
+            const result = await (window as any).wakey.performOAuth(authUrl, redirectUri);
+            return result.code;
+        }
+        throw new Error('OAuth not available - window.wakey.performOAuth not found');
     }
 
     protected startPolling(intervalMs: number): void {

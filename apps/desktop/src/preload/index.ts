@@ -114,6 +114,10 @@ contextBridge.exposeInMainWorld('wakey', {
         ipcRenderer.on('update-status', (_event, status) => callback(status));
     },
 
+    // Auto-start on boot
+    getAutoStart: () => ipcRenderer.invoke('get-auto-start'),
+    setAutoStart: (enabled: boolean) => ipcRenderer.invoke('set-auto-start', enabled),
+
     // Secure API key storage
     getSecureApiKeys: () => ipcRenderer.invoke('get-secure-api-keys'),
     setSecureApiKey: (key: string, value: string) => ipcRenderer.invoke('set-secure-api-key', key, value),
@@ -133,6 +137,33 @@ contextBridge.exposeInMainWorld('wakey', {
     // Linear API (routes through main process to bypass CORS)
     fetchLinearGraphQL: (query: string, variables: Record<string, any>, accessToken: string): Promise<{ ok: boolean; status: number; data?: any; error?: string }> =>
         ipcRenderer.invoke('fetch-linear-graphql', query, variables, accessToken),
+    // Projects
+    getProjects: () => ipcRenderer.invoke('get-projects'),
+    createProject: (project: any) => ipcRenderer.invoke('create-project', project),
+    updateProject: (id: number, updates: any) => ipcRenderer.invoke('update-project', id, updates),
+    deleteProject: (id: number) => ipcRenderer.invoke('delete-project', id),
+
+    // Goals
+    getGoals: () => ipcRenderer.invoke('get-goals'),
+    saveGoals: (goals: any[]) => ipcRenderer.invoke('save-goals', goals),
+    createGoal: (goal: any) => ipcRenderer.invoke('create-goal', goal),
+    updateGoal: (id: number, updates: any) => ipcRenderer.invoke('update-goal', id, updates),
+    deleteGoal: (id: number) => ipcRenderer.invoke('delete-goal', id),
+
+    // Workflows
+    getWorkflows: () => ipcRenderer.invoke('get-workflows'),
+    saveWorkflows: (workflows: any[]) => ipcRenderer.invoke('save-workflows', workflows),
+    createWorkflow: (workflow: any) => ipcRenderer.invoke('create-workflow', workflow),
+    updateWorkflow: (id: number, updates: any) => ipcRenderer.invoke('update-workflow', id, updates),
+    deleteWorkflow: (id: number) => ipcRenderer.invoke('delete-workflow', id),
+
+    // Achievements
+    getAchievements: () => ipcRenderer.invoke('get-achievements'),
+    saveAchievements: (achievements: any[]) => ipcRenderer.invoke('save-achievements', achievements),
+    unlockAchievement: (id: string) => ipcRenderer.invoke('unlock-achievement', id),
+    // OAuth and API Proxy for integrations
+    performOAuth: (authUrl: string, redirectUri: string) => ipcRenderer.invoke('perform-oauth', authUrl, redirectUri),
+    fetchApiProxy: (url: string, options?: RequestInit) => ipcRenderer.invoke('fetch-api-proxy', url, options),
 });
 
 // Validate that the API is properly exposed
@@ -243,6 +274,8 @@ declare global {
             getUpdateConfig: () => Promise<{ autoDownload: boolean; autoInstallOnAppQuit: boolean; allowPrerelease: boolean; checkInterval: number }>;
             setUpdateConfig: (config: { autoDownload?: boolean; autoInstallOnAppQuit?: boolean; allowPrerelease?: boolean; checkInterval?: number }) => Promise<any>;
             onUpdateStatus: (callback: (status: { status: string; version?: string; percent?: number; error?: string }) => void) => void;
+            getAutoStart: () => Promise<boolean>;
+            setAutoStart: (enabled: boolean) => Promise<boolean>;
             getSecureApiKeys: () => Promise<Record<string, string>>;
             setSecureApiKey: (key: string, value: string) => Promise<boolean>;
             deleteSecureApiKey: (key: string) => Promise<boolean>;

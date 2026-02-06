@@ -62,6 +62,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { getEncryptionKey, getWebSocketToken, validateWebSocketToken } from './security';
 import { logger } from './logger';
+import { initAutoUpdater, cleanup as cleanupAutoUpdater } from './auto-updater';
 
 // ============================================
 // Type Definitions
@@ -178,6 +179,50 @@ interface FocusPreset {
     isDefault?: boolean;
 }
 
+
+interface Project {
+    id: number;
+    name: string;
+    description: string;
+    color: string;
+    status: 'active' | 'completed' | 'archived';
+    totalFocusMinutes: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Goal {
+    id: number;
+    title: string;
+    description: string;
+    targetValue: number;
+    currentValue: number;
+    unit: string;
+    deadline: string;
+    status: 'active' | 'completed' | 'failed';
+    createdAt: string;
+}
+
+interface Workflow {
+    id: number;
+    name: string;
+    description: string;
+    steps: { id: string; name: string; type: string; config: any }[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    unlockedAt: string | null;
+    progress: number;
+    maxProgress: number;
+}
+
 interface StoreSchema {
     settings: {
         autoStartTracking: boolean;
@@ -203,12 +248,19 @@ interface StoreSchema {
     flashcards: Flashcard[];
     agentTasks: AgentTask[];
     focusPresets: FocusPreset[];
+    projects: Project[];
+    goals: Goal[];
+    workflows: Workflow[];
+    achievements: Achievement[];
     nextIds: {
         activity: number;
         session: number;
         task: number;
         note: number;
         flashcard: number;
+        project: number;
+        goal: number;
+        workflow: number;
     };
 }
 
@@ -237,12 +289,19 @@ const store = new Store<StoreSchema>({
         flashcards: [],
         agentTasks: [],
         focusPresets: [],
+        projects: [],
+        goals: [],
+        workflows: [],
+        achievements: [],
         nextIds: {
             activity: 1,
             session: 1,
             task: 1,
             note: 1,
-            flashcard: 1
+            flashcard: 1,
+            project: 1,
+            goal: 1,
+            workflow: 1
         },
     },
 });
@@ -1300,6 +1359,123 @@ function setupIpcHandlers(): void {
         store.set('focusPresets', presets);
         return true;
     });
+    // ============================================
+    // Projects IPC Handlers
+    // ============================================
+    ipcMain.handle('get-projects', () => store.get('projects', []));
+    ipcMain.handle('create-project', (_e, project: Omit<Project, 'id'>) => {
+        const projects = store.get('projects', []);
+        const nextIds = store.get('nextIds');
+        const id = nextIds.project;
+        const newProject: Project = { ...project, id } as Project;
+        projects.push(newProject);
+        store.set('projects', projects);
+        store.set('nextIds.project', id + 1);
+        return newProject;
+    });
+    ipcMain.handle('update-project', (_e, id: number, updates: Partial<Project>) => {
+        const projects = store.get('projects', []);
+        const idx = projects.findIndex(p => p.id === id);
+        if (idx !== -1) {
+            projects[idx] = { ...projects[idx], ...updates, updatedAt: new Date().toISOString() };
+            store.set('projects', projects);
+            return projects[idx];
+        }
+        return null;
+    });
+    ipcMain.handle('delete-project', (_e, id: number) => {
+        const projects = store.get('projects', []).filter(p => p.id !== id);
+        store.set('projects', projects);
+        return true;
+    });
+
+    // ============================================
+    // Goals IPC Handlers
+    // ============================================
+    ipcMain.handle('get-goals', () => store.get('goals', []));
+    ipcMain.handle('save-goals', (_e, goals: Goal[]) => {
+        store.set('goals', goals);
+        return true;
+    });
+    ipcMain.handle('create-goal', (_e, goal: Omit<Goal, 'id'>) => {
+        const goals = store.get('goals', []);
+        const nextIds = store.get('nextIds');
+        const id = nextIds.goal;
+        const newGoal: Goal = { ...goal, id } as Goal;
+        goals.push(newGoal);
+        store.set('goals', goals);
+        store.set('nextIds.goal', id + 1);
+        return newGoal;
+    });
+    ipcMain.handle('update-goal', (_e, id: number, updates: Partial<Goal>) => {
+        const goals = store.get('goals', []);
+        const idx = goals.findIndex(g => g.id === id);
+        if (idx !== -1) {
+            goals[idx] = { ...goals[idx], ...updates };
+            store.set('goals', goals);
+            return goals[idx];
+        }
+        return null;
+    });
+    ipcMain.handle('delete-goal', (_e, id: number) => {
+        const goals = store.get('goals', []).filter(g => g.id !== id);
+        store.set('goals', goals);
+        return true;
+    });
+
+    // ============================================
+    // Workflows IPC Handlers
+    // ============================================
+    ipcMain.handle('get-workflows', () => store.get('workflows', []));
+    ipcMain.handle('save-workflows', (_e, workflows: Workflow[]) => {
+        store.set('workflows', workflows);
+        return true;
+    });
+    ipcMain.handle('create-workflow', (_e, workflow: Omit<Workflow, 'id'>) => {
+        const workflows = store.get('workflows', []);
+        const nextIds = store.get('nextIds');
+        const id = nextIds.workflow;
+        const newWorkflow: Workflow = { ...workflow, id } as Workflow;
+        workflows.push(newWorkflow);
+        store.set('workflows', workflows);
+        store.set('nextIds.workflow', id + 1);
+        return newWorkflow;
+    });
+    ipcMain.handle('update-workflow', (_e, id: number, updates: Partial<Workflow>) => {
+        const workflows = store.get('workflows', []);
+        const idx = workflows.findIndex(w => w.id === id);
+        if (idx !== -1) {
+            workflows[idx] = { ...workflows[idx], ...updates, updatedAt: new Date().toISOString() };
+            store.set('workflows', workflows);
+            return workflows[idx];
+        }
+        return null;
+    });
+    ipcMain.handle('delete-workflow', (_e, id: number) => {
+        const workflows = store.get('workflows', []).filter(w => w.id !== id);
+        store.set('workflows', workflows);
+        return true;
+    });
+
+    // ============================================
+    // Achievements IPC Handlers
+    // ============================================
+    ipcMain.handle('get-achievements', () => store.get('achievements', []));
+    ipcMain.handle('save-achievements', (_e, achievements: Achievement[]) => {
+        store.set('achievements', achievements);
+        return true;
+    });
+    ipcMain.handle('unlock-achievement', (_e, id: string) => {
+        const achievements = store.get('achievements', []);
+        const idx = achievements.findIndex(a => a.id === id);
+        if (idx !== -1) {
+            achievements[idx] = { ...achievements[idx], unlockedAt: new Date().toISOString() };
+            store.set('achievements', achievements);
+            return achievements[idx];
+        }
+        return null;
+    });
+
 
     // Enhanced Analytics handlers
     ipcMain.handle('get-top-websites', (_e, limit: number = 10, startDate?: string, endDate?: string) => {
@@ -1662,9 +1838,35 @@ app.whenReady().then(() => {
 
     createWindow();
 
+    // Initialize auto-updater with the main window
+    if (mainWindow) {
+        initAutoUpdater(mainWindow);
+    }
+
+    // Handle --hidden flag for auto-start (minimized to tray)
+    const isHiddenStart = process.argv.includes('--hidden');
+    if (isHiddenStart && mainWindow) {
+        mainWindow.hide();
+    }
+
     createTray();
     registerShortcuts();
     setupIpcHandlers();
+
+    // Auto-start IPC handlers
+    ipcMain.handle('get-auto-start', () => {
+        const settings = app.getLoginItemSettings();
+        return settings.openAtLogin;
+    });
+
+    ipcMain.handle('set-auto-start', (_e, enabled: boolean) => {
+        app.setLoginItemSettings({
+            openAtLogin: enabled,
+            openAsHidden: true,
+            args: ['--hidden']
+        });
+        return enabled;
+    });
 
     // Clean up old activities on startup
     cleanupOldActivities();
@@ -1696,3 +1898,97 @@ app.on('before-quit', () => {
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) app.quit();
 else app.on('second-instance', () => { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.show(); mainWindow.focus(); } });
+
+// ============================================
+// OAuth Window Handler for Integrations
+// ============================================
+ipcMain.handle('perform-oauth', async (_e, authUrl: string, redirectUriBase: string) => {
+    return new Promise((resolve, reject) => {
+        const authWindow = new BrowserWindow({
+            width: 600,
+            height: 700,
+            show: true,
+            frame: true,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+            },
+        });
+
+        authWindow.loadURL(authUrl);
+
+        const handleNavigation = (url: string) => {
+            if (url.startsWith(redirectUriBase) || url.startsWith('wakey://')) {
+                const urlObj = new URL(url);
+                const code = urlObj.searchParams.get('code');
+                const error = urlObj.searchParams.get('error');
+                const state = urlObj.searchParams.get('state');
+                
+                authWindow.close();
+                
+                if (error) {
+                    reject(new Error(error));
+                } else if (code) {
+                    resolve({ code, state });
+                } else {
+                    reject(new Error('No authorization code received'));
+                }
+            }
+        };
+
+        authWindow.webContents.on('will-redirect', (_event, url) => {
+            handleNavigation(url);
+        });
+
+        authWindow.webContents.on('will-navigate', (_event, url) => {
+            handleNavigation(url);
+        });
+
+        authWindow.on('closed', () => {
+            reject(new Error('User closed the window'));
+        });
+    });
+});
+
+// Generic API Proxy for CORS-free requests
+ipcMain.handle('fetch-api-proxy', async (_e, url: string, options: RequestInit = {}) => {
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...options.headers,
+                'User-Agent': 'Wakey-Desktop-App/1.0',
+            },
+        });
+        
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType?.includes('application/json')) {
+            data = await response.json();
+        } else {
+            data = await response.text();
+        }
+        
+        return {
+            ok: response.ok,
+            status: response.status,
+            data,
+            headers: Object.fromEntries(response.headers.entries()),
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            status: 0,
+            error: (error as Error).message,
+        };
+    }
+});
+
+// Register wakey:// protocol for OAuth deep linking
+if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient('wakey', process.execPath, [process.argv[1]]);
+    }
+} else {
+    app.setAsDefaultProtocolClient('wakey');
+}

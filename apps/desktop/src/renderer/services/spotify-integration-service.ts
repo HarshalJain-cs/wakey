@@ -46,7 +46,7 @@ export interface SpotifyTrack {
 
 class SpotifyIntegrationService {
     private config: SpotifyConfig;
-    private readonly CLIENT_ID = 'YOUR_SPOTIFY_CLIENT_ID'; // To be configured
+    private readonly CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || '';
     private readonly REDIRECT_URI = 'wakey://spotify/callback';
     private readonly SCOPES = [
         'user-read-playback-state',

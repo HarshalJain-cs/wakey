@@ -2,7 +2,23 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, copyFileSync } from 'fs';
+
+// Plugin to copy distraction-overlay.html to out/main
+const copyDistractionOverlay = () => ({
+    name: 'copy-distraction-overlay',
+    writeBundle() {
+        const mainDir = resolve(__dirname, 'out/main');
+        if (!existsSync(mainDir)) {
+            mkdirSync(mainDir, { recursive: true });
+        }
+        const src = resolve(__dirname, 'src/main/distraction-overlay.html');
+        const dest = resolve(mainDir, 'distraction-overlay.html');
+        if (existsSync(src)) {
+            copyFileSync(src, dest);
+        }
+    }
+});
 
 // Plugin to ensure preload output is treated as CommonJS
 const ensurePreloadCJS = () => ({
@@ -21,7 +37,7 @@ const ensurePreloadCJS = () => ({
 
 export default defineConfig({
     main: {
-        plugins: [externalizeDepsPlugin()],
+        plugins: [externalizeDepsPlugin(), copyDistractionOverlay()],
         build: {
             rollupOptions: {
                 output: {
@@ -71,7 +87,7 @@ export default defineConfig({
             react(),
             visualizer({
                 filename: 'dist/stats.html',
-                open: true,
+                open: false,
                 gzipSize: true,
                 brotliSize: true,
             }),
